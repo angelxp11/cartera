@@ -1,0 +1,55 @@
+/* Paleta de Colores - Escala de Grises */
+:root {
+  /* Grises Principales */
+  --color-white: #ffffff;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-black: #000000;
+
+  /* Acentos (Colores del logo) */
+  --color-primary: #233844; /* azul oscuro del logo */
+  --color-primary-dark: #0a6e76; /* verde/azul más oscuro */
+  --color-primary-darker: #0ca3b5; /* cian claro */
+  --color-primary-light: #0da4b5; /* cian secundario */
+
+  /* Estados */
+  --color-error: #dc2626;
+  --color-error-light: #fee2e2;
+  --color-error-dark: #b71c1c;
+  --color-success: #22c55e;
+  --color-success-light: #dcfce7;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fef3c7;
+  --color-success-dark: #065f46;
+  --color-warning-dark: #7c2d12;
+
+  /* Sombras */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-xl: 0 10px 25px rgba(0, 0, 0, 0.2);
+
+  /* Bordes */
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 10px;
+
+  /* Transiciones */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+
+  /* Transparent/overlay colors used in UI */
+  --overlay-1: rgba(255, 255, 255, 0.06);
+  --overlay-2: rgba(255, 255, 255, 0.1);
+  --color-primary-opaque: rgba(102, 118, 234, 0.12);
+  --focus-glow: 0 0 8px rgba(102, 126, 234, 0.18);
+}

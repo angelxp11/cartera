@@ -1,0 +1,148 @@
+/* ===== CONTENEDOR PRINCIPAL ===== */
+.content-card {
+  background: linear-gradient(145deg, #1f2937, #111827);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: 0.3s ease;
+}
+
+/* ===== TITULO ===== */
+.content-card h2 {
+  margin: 0 0 20px 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--color-gray-50);
+}
+
+/* ===== FORMULARIO ===== */
+.course-form {
+  margin-bottom: 20px;
+}
+
+.course-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #374151;
+  background: var(--color-gray-900);
+  color: #f9fafb;
+  font-size: 14px;
+  transition: all 0.25s ease;
+  outline: none;
+}
+
+.course-form input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+
+/* ===== BOTONES GENERALES ===== */
+button {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: white;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  font-size: 13px;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--color-primary);
+}
+
+button:last-child:hover {
+  box-shadow: 0 6px 15px rgba(202, 68, 239, 0.4);
+}
+
+/* botones de acción en rojo */
+.red-button {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.red-button:hover {
+  box-shadow: 0 6px 15px rgba(239, 68, 68, 0.4);
+}
+
+/* ===== LISTA ===== */
+.course-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  padding-top: 10px;
+}
+
+/* ===== ITEM ===== */
+.course-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 12px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.25s ease;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.course-item:hover {
+  background: rgba(99, 102, 241, 0.05);
+  transform: translateX(4px);
+}
+
+/* ===== TEXTO ===== */
+.course-item strong {
+  font-size: 15px;
+  letter-spacing: 0.5px;
+}
+
+.course-item div {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+/* ===== ACCIONES ===== */
+.course-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.course-item > div:last-child {
+  display: flex;
+  gap: 8px;
+}
+
+/* ===== MENSAJE ERROR ===== */
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 10px;
+  border-radius: 10px;
+  color: #f87171;
+  margin-bottom: 15px;
+  font-size: 13px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .course-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .course-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

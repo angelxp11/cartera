@@ -1,0 +1,108 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, rgba(35,56,68,0.12) 0%, rgba(13,164,181,0.08) 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.login-box {
+  background: var(--color-gray-800);
+  padding: 40px;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-xl);
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-box h1 {
+  text-align: center;
+  color: var(--color-gray-50);
+  margin-bottom: 30px;
+  font-size: 28px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--color-gray-300);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--color-gray-700);
+  background: var(--color-gray-800);
+  color: var(--color-gray-50);
+  border-radius: var(--border-radius-sm);
+  font-size: 14px;
+  transition: border-color var(--transition-normal);
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-glow);
+}
+
+.error-message {
+  background-color: var(--color-error-light);
+  color: var(--color-error);
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 20px;
+  font-size: 14px;
+  border-left: 4px solid var(--color-error);
+}
+
+.btn-login {
+  width: 100%;
+  padding: 12px;
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--transition-normal);
+}
+
+.btn-login:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+}
+
+.btn-login:active:not(:disabled) {
+  background-color: var(--color-primary-darker);
+}
+
+.btn-login:disabled {
+  background-color: var(--color-gray-500);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 20px;
+  color: var(--color-gray-600);
+  font-size: 14px;
+}
+
+.login-footer a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.login-footer a:hover {
+  text-decoration: underline;
+}

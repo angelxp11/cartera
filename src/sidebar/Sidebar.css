@@ -1,0 +1,214 @@
+/* ===== CONTENEDOR PRINCIPAL ===== */
+.csb-container {
+  background: linear-gradient(180deg, #25666e 0%, #111827 100%);
+  color: #ffffff;
+  width: 260px;
+  height: 100vh;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s ease, left 0.3s ease;
+  box-shadow: 4px 0 25px rgba(0, 0, 0, 0.4);
+  position: fixed;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  z-index: 999;
+}
+
+/* Estado cerrado */
+.csb-closed {
+  width: 80px;
+}
+
+/* ===== HEADER ===== */
+.csb-header {
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  margin-bottom: 30px;
+  height: 50px;
+}
+
+/* center header contents on desktop and hide toggle button */
+@media (min-width: 769px) {
+  .csb-header {
+    justify-content: center;
+  }
+  .csb-toggle-btn {
+    display: none;
+  }
+}
+
+/* mobile-specific visibility handled below */
+.csb-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-primary);
+  flex: 1;
+  letter-spacing: 1px;
+}
+
+/* logo in header */
+.csb-logo {
+  /* default (collapsed) height */
+  height: 48px;
+  width: auto;
+  transition: height 0.3s ease;
+}
+
+/* when sidebar expanded, logo grows to better display higher resolution image */
+.csb-container.csb-open .csb-logo {
+  height: 82px;
+}
+
+/* ===== BOTÓN TOGGLE ===== */
+.csb-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.csb-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.csb-toggle-line {
+  width: 22px;
+  height: 2px;
+  background-color: #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+/* ===== NAVEGACIÓN ===== */
+.csb-nav {
+  flex: 1;
+  padding: 0 10px;
+}
+
+/* ITEM */
+.csb-nav-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #9ca3af;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  gap: 12px;
+  font-size: 14px;
+  border: none;
+  background: transparent;
+  width: 100%;
+}
+
+.csb-nav-item:hover {
+  background: rgba(99, 102, 241, 0.15);
+  color: #ffffff;
+  transform: translateX(4px);
+}
+
+/* Activo */
+.csb-active {
+  background: var(--color-primary);
+  color: #ffffff;
+  box-shadow: var(--color-primary)
+}
+
+/* Icono */
+.csb-nav-icon {
+  font-size: 20px;
+  min-width: 22px;
+  text-align: center;
+}
+
+/* Label */
+.csb-nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== FOOTER ===== */
+.csb-footer {
+  padding: 15px 10px 0 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Usuario */
+.csb-user-info {
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  margin-bottom: 15px;
+}
+
+.csb-user-name {
+  margin: 0;
+  font-weight: 600;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.csb-user-email {
+  margin: 6px 0 0 0;
+  color: #9ca3af;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== LOGOUT ===== */
+.csb-logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  background: linear-gradient(135deg, var(--color-error), var(--color-error-dark));
+  border: none;
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.csb-logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(239, 68, 68, 0.4);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .csb-container {
+    width: 260px;
+    left: 0;
+  }
+
+  .csb-open {
+    left: 0;
+  }
+
+  .csb-closed {
+    left: -260px;
+  }
+
+  /* logo remains visible on mobile; it now acts as the toggle control */
+  
+  /* toggle button styles no longer in use */
+  .csb-toggle-btn {
+    display: none;
+  }
+}
