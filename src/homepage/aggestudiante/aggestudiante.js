@@ -12,8 +12,7 @@ function AggEstudiantes({ userName }) {
   const [form, setForm] = useState({
     nombreCompleto: "",
     cursoId: "",
-    valorCurso: 0,
-    descuento: "",              // nuevo campo para el descuento (string formatted)
+    valorCurso: "", // now entered manually as formatted string
     cc: "",
     celular: "",
     correo: "",
@@ -172,21 +171,11 @@ function AggEstudiantes({ userName }) {
     if (name === "nombreCompleto") {
       next.nombreCompleto = value.toUpperCase();
     } else if (name === "cursoId") {
-      const selected = courses.find((c) => c.id === value);
+      // only store selection; valorCurso is entered manually
       next.cursoId = value;
-      const base = selected ? selected.valor : 0;
-      const desc = parseInt(unformatNumber(next.descuento)) || 0;
-      next.valorCurso = Math.max(0, base - desc);
-    } else if (name === "descuento") {
-      // format like other numeric fields
+    } else if (name === "valorCurso") {
       const numeric = unformatNumber(value);
-      next.descuento = numeric ? formatNumber(Number(numeric)) : "";
-      const descNum = parseInt(numeric) || 0;
-      if (next.cursoId) {
-        const sel = courses.find((c) => c.id === next.cursoId);
-        const base = sel ? sel.valor : 0;
-        next.valorCurso = Math.max(0, base - descNum);
-      }
+      next.valorCurso = numeric ? formatNumber(Number(numeric)) : "";
     } else if (name === "pagoInicial" || name === "numeroCuotas" || name === "pagoTotal") {
       const numeric = unformatNumber(value);
       next[name] = formatNumber(Number(numeric));
@@ -289,7 +278,7 @@ function AggEstudiantes({ userName }) {
     if (useForm.tipoPago === "FINANCIADO") {
       const cuotas = parseInt(unformatNumber(useForm.numeroCuotas)) || 0;
       const pagoInicial = parseInt(unformatNumber(useForm.pagoInicial)) || 0;
-      const valorCursoNum = Number(useForm.valorCurso) || 0;
+      const valorCursoNum = parseInt(unformatNumber(useForm.valorCurso)) || 0;
       const saldo = valorCursoNum - pagoInicial;
 
       if (!cuotas || cuotas <= 0) {
@@ -411,7 +400,7 @@ function AggEstudiantes({ userName }) {
 
     if (form.tipoPago === "TOTAL") {
       const pagoTotalNum = parseInt(unformatNumber(form.pagoTotal)) || 0;
-      const valorCursoNum = Number(form.valorCurso) || 0;
+    const valorCursoNum = parseInt(unformatNumber(form.valorCurso)) || 0;
       if (!pagoTotalNum || pagoTotalNum < valorCursoNum) {
         alert("Ingrese el pago total recibido (igual o mayor al valor del curso)." );
         ocultarCarga();
@@ -470,8 +459,7 @@ function AggEstudiantes({ userName }) {
       setForm({
         nombreCompleto: "",
         cursoId: "",
-        valorCurso: 0,
-        descuento: "",
+        valorCurso: "",
         cc: "",
         celular: "",
         correo: "",
@@ -497,7 +485,6 @@ function AggEstudiantes({ userName }) {
 
       // Calculate saldo pendiente (remaining balance)
       const pagoInicialNum = parseInt(unformatNumber(form.pagoInicial)) || 0;
-      const valorCursoNum = Number(form.valorCurso) || 0;
       const saldoPendiente = valorCursoNum - pagoInicialNum;
       const numeroCuotasNum = parseInt(unformatNumber(form.numeroCuotas)) || 0;
 
@@ -563,8 +550,7 @@ function AggEstudiantes({ userName }) {
       setForm({
         nombreCompleto: "",
         cursoId: "",
-        valorCurso: 0,
-        descuento: "",
+        valorCurso: "",
         cc: "",
         celular: "",
         correo: "",
@@ -650,25 +636,18 @@ function AggEstudiantes({ userName }) {
           </select>
         </label>
 
-        {form.valorCurso > 0 && (
-          <div className="valor-curso">
-            VALOR: ${formatNumber(form.valorCurso)}
-          </div>
-        )}
+        {/* valor del curso manual */}
+        <label className="field">
+          <span className="label-text">VALOR DEL CURSO</span>
+          <input
+            name="valorCurso"
+            value={form.valorCurso}
+            onChange={handleChange}
+            placeholder=""
+          />
+        </label>
 
-        {/* descuento temporal */}
-        {form.cursoId && (
-          <label className="field">
-            <span className="label-text">DESCUENTO</span>
-            <input
-              name="descuento"
-              type="text"
-              value={form.descuento}
-              onChange={handleChange}
-              placeholder=""
-            />
-          </label>
-        )}
+
 
         {/* Fecha de registro: usar hoy o custom */}
         <label className="field">
