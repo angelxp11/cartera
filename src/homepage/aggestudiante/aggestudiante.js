@@ -484,6 +484,7 @@ function AggEstudiantes({ userName }) {
       }
 
       // Calculate saldo pendiente (remaining balance)
+      const valorCursoNum = parseInt(unformatNumber(form.valorCurso)) || 0;
       const pagoInicialNum = parseInt(unformatNumber(form.pagoInicial)) || 0;
       const saldoPendiente = valorCursoNum - pagoInicialNum;
       const numeroCuotasNum = parseInt(unformatNumber(form.numeroCuotas)) || 0;
