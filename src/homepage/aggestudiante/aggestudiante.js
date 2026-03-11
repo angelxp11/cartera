@@ -325,6 +325,37 @@ function AggEstudiantes({ userName }) {
     setCronograma([]);
   };
 
+  // helper that adds months but clamps to end-of-month when needed
+  const addMonthsSafe = (date, delta) => {
+    const d = new Date(date);
+    const day = d.getDate();
+    const targetMonth = d.getMonth() + delta;
+    const targetYear = d.getFullYear();
+    // start at first of target month then set day with min(daysInMonth, day)
+    const firstOfMonth = new Date(targetYear, targetMonth, 1);
+    const daysInMonth = new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth() + 1, 0).getDate();
+    firstOfMonth.setDate(Math.min(day, daysInMonth));
+    return firstOfMonth;
+  };
+
+  // 🔹 AJUSTAR FECHA DE CUOTA (meses) individual
+  const ajustarMesCuota = (indice, delta) => {
+    setCronograma((prev) => {
+      const nueva = [...prev];
+      const cuota = nueva[indice];
+      if (!cuota) return prev;
+      cuota.fecha = addMonthsSafe(cuota.fecha, delta);
+      return nueva;
+    });
+  };
+
+  // 🔹 DESPLAZAR TODO EL CRONOGRAMA en meses (útil para ajustar primer pago)
+  const shiftCronograma = (delta) => {
+    setCronograma((prev) =>
+      prev.map((c) => ({ ...c, fecha: addMonthsSafe(c.fecha, delta) }))
+    );
+  };
+
   // helper to create a local Date from yyyy-mm-dd string (avoid timezone shift)
   const parseLocalDate = (iso) => {
     if (!iso) return new Date();
@@ -846,8 +877,13 @@ function AggEstudiantes({ userName }) {
         <div className="cronograma-container">
           <h3>CRONOGRAMA DE PAGOS</h3>
 
+          <div className="cronograma-controls" style={{ textAlign: 'center', marginBottom: '10px' }}>
+            <button className="mes-btn" onClick={() => shiftCronograma(-1)} title="Trasladar todo un mes atrás">◀ Todo -1 mes</button>
+            <button className="mes-btn" onClick={() => shiftCronograma(1)} title="Trasladar todo un mes adelante">Todo +1 mes ▶</button>
+          </div>
+
           <div className="cronograma-grid">
-            {cronograma.map((cuota) => (
+            {cronograma.map((cuota, idx) => (
               <div key={cuota.numero} className="cuota-card">
                 <div className="cuota-numero">
                   CUOTA {cuota.numero}
