@@ -87,19 +87,27 @@ function Financiamiento({ userName }) {
     const totalSelected = selectedCuotas.reduce((acc, k) => {
       return acc + (curso.cuotas[k]?.valor || 0);
     }, 0);
+
+    // build full sequence: selected first, then other pending cuotas (sorted)
+    const allPendientes = pendingCuotasForCourse(selectedCourse)
+      .filter((k) => !selectedCuotas.includes(k))
+      .sort();
+    const sequence = [...selectedCuotas, ...allPendientes];
+
     if (amountToPay > totalSelected) {
       alert(
         `El monto excede el total de las cuotas seleccionadas (${formatNumber(
           totalSelected
-        )}). Se aplicará sólo hasta completar el total.`
+        )}). El excedente se aplicará a las siguientes cuotas pendientes.`
       );
     }
+
     let remaining = amountToPay;
     const updates = {};
     let totalAbonado = 0;
 
-    // process each selected cuota sequentially
-    selectedCuotas.forEach((key) => {
+    // distribute payment across sequence until we run out of money
+    sequence.forEach((key) => {
       if (remaining <= 0) return;
       const cuota = curso.cuotas[key];
       if (!cuota || cuota.estado !== 'PENDIENTE') return;
@@ -136,8 +144,15 @@ function Financiamiento({ userName }) {
       const newCurso = { ...updatedCourses[selectedCourse] };
       newCurso.saldoPendiente = (newCurso.saldoPendiente || 0) - totalAbonado;
       const newCuotas = { ...newCurso.cuotas };
+
+      // same sequence as the update logic: selected then other pending
+      const allPendientes = pendingCuotasForCourse(selectedCourse)
+        .filter((k) => !selectedCuotas.includes(k))
+        .sort();
+      const sequence = [...selectedCuotas, ...allPendientes];
+
       let rem = amountToPay;
-      selectedCuotas.forEach((key) => {
+      sequence.forEach((key) => {
         if (rem <= 0) return;
         const cuota = { ...newCuotas[key] };
         const origValor = cuota.valor || 0;
