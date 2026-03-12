@@ -23,6 +23,26 @@ function Financiamiento({ userName }) {
     return new Intl.NumberFormat('es-ES').format(num);
   };
 
+  // construye texto descriptivo de la cuota: número y, si existe, la fecha
+  // *no* agrega la palabra "Cuota" porque debe agregarse exactamente una vez
+  // en el lugar donde se renderiza. Esto evita el texto duplicado
+  // "Cuota Cuota 4..." que aparecía anteriormente.
+  const formatCuotaLabel = (key, cuota) => {
+    let label = `${key}`; // solo el número inicialmente
+    if (cuota && cuota.fecha) {
+      let fecha = cuota.fecha;
+      if (fecha.toDate) fecha = fecha.toDate();
+      const day = fecha.getDate();
+      const monthNames = [
+        'enero','febrero','marzo','abril','mayo','junio',
+        'julio','agosto','septiembre','octubre','noviembre','diciembre'
+      ];
+      const month = monthNames[fecha.getMonth()] || '';
+      label += ` del ${day} de ${month}`;
+    }
+    return label;
+  };
+
   const unformatNumber = (str) => {
     if (!str && str !== 0) return '';
     return String(str).replace(/\./g, '').replace(/[^0-9]/g, '');
@@ -257,7 +277,7 @@ function Financiamiento({ userName }) {
                             key={key}
                             className={c.estado === 'PAGADO' ? 'finan-pagada' : ''}
                           >
-                            {key}: ${formatNumber(c.valor)} - {c.estado}
+                            Cuota {formatCuotaLabel(key, c)}: ${formatNumber(c.valor)} - {c.estado}
                             {c.abonos && c.abonos.length > 0 && (
                               <span> (abonos: ${formatNumber(
                                 c.abonos.reduce((a, b) => a + (b.valor || 0), 0)
@@ -323,7 +343,7 @@ function Financiamiento({ userName }) {
                         });
                       }}
                     >
-                      <div className="finan-cuota-option-label">{k}</div>
+                      <div className="finan-cuota-option-label">Cuota {formatCuotaLabel(k, courses[selectedCourse].cuotas[k])}</div>
                       <div className="finan-cuota-option-valor">
                         ${formatNumber(
                           courses[selectedCourse].cuotas[k].valor

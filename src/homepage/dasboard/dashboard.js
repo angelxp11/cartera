@@ -12,6 +12,7 @@ function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()); // 0-11
   const [quincenaFilter, setQuincenaFilter] = useState('1'); // '1' = 1-15, '2' = 16-31
   const [searchTerm, setSearchTerm] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('Todos'); // Todos, Pendientes, Pagados, Abonos
   const itemsPerPage = 10;
 
   // Generar lista de años disponibles (últimos 5 años y próximos 2)
@@ -81,20 +82,64 @@ function Dashboard() {
                     fechaPago = cuota.fecha.toDate ? cuota.fecha.toDate() : new Date(cuota.fecha);
                   }
 
+                  // fila representando el estado actual de la cuota (pendiente o pagada)
+                  // when a cuota is fully pagada the stored valor may be 0, which
+                  // hides the amount from the dashboard. Instead, derive the display
+                  // value from the sum of abonos if present. Also tag tipo for clarity.
+                  let displayValue = cuota.valor || 0;
+                  let tipoRegistro = undefined;
+                  if (cuota.estado === 'PAGADO') {
+                    // if we've got abonos recorded, use their total as the amount
+                    if ((!displayValue || displayValue === 0) && cuota.abonos && cuota.abonos.length > 0) {
+                      displayValue = cuota.abonos.reduce((a, b) => a + (b.valor || 0), 0);
+                    }
+                    // if there were abonos this is effectively a payment event
+                    if (cuota.abonos && cuota.abonos.length > 0) {
+                      tipoRegistro = 'PAGO_TOTAL';
+                    }
+                  }
+
                   estudiantesData.push({
                     cc,
                     nombre: estudiante.nombreCompleto || '',
                     celular: estudiante.celular || '',
                     correo: estudiante.correo || '',
                     curso: cursoId,
-                    valorCuota: cuota.valor || 0,
+                    valorCuota: displayValue,
                     estado: cuota.estado || 'PENDIENTE',
                     fechaPago,
                     cuotaKey,
                     responsable: cuota.responsable || '-',
                     factura: cuota.factura || '-',
-                    responsableRegistro: cursoData.responsableRegistro || '-'
+                    responsableRegistro: cursoData.responsableRegistro || '-',
+                    ...(tipoRegistro ? { tipo: tipoRegistro } : {})
                   });
+
+                  // agregar registros de abonos individuales si existen
+                  if (cuota.abonos && Array.isArray(cuota.abonos)) {
+                    cuota.abonos.forEach((abono, idx) => {
+                      let fechaAbono = abono.fecha;
+                      if (fechaAbono && fechaAbono.toDate) {
+                        fechaAbono = fechaAbono.toDate();
+                      }
+
+                      estudiantesData.push({
+                        cc,
+                        nombre: estudiante.nombreCompleto || '',
+                        celular: estudiante.celular || '',
+                        correo: estudiante.correo || '',
+                        curso: cursoId,
+                        valorCuota: abono.valor || 0,
+                        estado: 'ABONO',
+                        tipo: 'ABONO',
+                        fechaPago: fechaAbono,
+                        cuotaKey: `${cuotaKey} - Abono ${idx + 1}`,
+                        responsable: abono.responsable || '-',
+                        factura: abono.factura || '-',
+                        responsableRegistro: cursoData.responsableRegistro || '-'
+                      });
+                    });
+                  }
                 });
               } else if (cursoData.tipoPago === 'TOTAL') {
                 // Si es pago total, crear una sola entrada
@@ -164,51 +209,84 @@ function Dashboard() {
 
       // Verificar que la fecha esté dentro del rango de la quincena
       const inRange = s.fechaPago >= period.inicio && s.fechaPago <= period.fin;
-      
-      // Si no hay término de búsqueda, retornar solo el filtro de quincena
-      if (!searchLower) return inRange;
-      
-      // Buscar en cc, nombre, celular o correo
-      return inRange && (
-        (s.cc && s.cc.toLowerCase().includes(searchLower)) ||
-        (s.nombre && s.nombre.toLowerCase().includes(searchLower)) ||
-        (s.celular && s.celular.toLowerCase().includes(searchLower)) ||
-        (s.correo && s.correo.toLowerCase().includes(searchLower))
-      );
+      if (!inRange) return false;
+
+      // Aplicar filtro de búsqueda si existe
+      if (searchLower) {
+        const matchesSearch = (
+          (s.cc && s.cc.toLowerCase().includes(searchLower)) ||
+          (s.nombre && s.nombre.toLowerCase().includes(searchLower)) ||
+          (s.celular && s.celular.toLowerCase().includes(searchLower)) ||
+          (s.correo && s.correo.toLowerCase().includes(searchLower))
+        );
+        if (!matchesSearch) return false;
+      }
+
+      // Aplicar filtro de tipo/estado de pago
+      switch (paymentFilter) {
+        case 'Pendientes':
+          return s.estado === 'PENDIENTE';
+        case 'Pagados':
+          return s.estado === 'PAGADO';
+        case 'Abonos':
+          return s.tipo === 'ABONO';
+        default: // Todos
+          return true;
+      }
     });
-  }, [allStudents, quincenaFilter, selectedYear, selectedMonth, searchTerm]);
+  }, [allStudents, quincenaFilter, selectedYear, selectedMonth, searchTerm, paymentFilter]);
 
   // Paginación
   const totalPages = Math.ceil(filteredByQuincena.length / itemsPerPage);
   const startIdx = (currentPage - 1) * itemsPerPage;
   const paginatedStudents = filteredByQuincena.slice(startIdx, startIdx + itemsPerPage);
 
-  // Calcular estadísticas
+  // Calcular estadísticas para las tarjetas de la parte superior.
+  // Se basan en los registros que actualmente se muestran tras aplicar todos los
+  // filtros (quincena, búsqueda y tipo/estado de pago). De esta forma los valores
+  // cambian automáticamente cuando el usuario cambia la opción de "Todos/Pendientes/...".
   const stats = useMemo(() => {
     const quincena = parseInt(quincenaFilter);
     const period = getQuincenaPeriod(quincena);
 
+    // suma de todos los valores mostrados en la tabla
+    const totalVisible = filteredByQuincena.reduce((acc, s) => {
+      const amt = (s.valorCuota !== undefined && s.valorCuota !== null)
+        ? s.valorCuota
+        : ((s.valor !== undefined && s.valor !== null) ? s.valor : 0);
+      return acc + amt;
+    }, 0);
+
     let totalARecibir = 0;
     let totalRecibido = 0;
 
-    // Para cada registro en la quincena, sumar siempre su valor a "Total a Recibir".
-    // "Total Recibido" suma únicamente los que ya están PAGADO, además de
-    // contar automáticamente los tipos PAGO_INICIAL y PAGO_TOTAL como recibidos.
-    allStudents.forEach((s) => {
-      if (!s.fechaPago || !(s.fechaPago instanceof Date)) return;
-
-      if (s.fechaPago >= period.inicio && s.fechaPago <= period.fin) {
+    if (paymentFilter === 'Todos') {
+      // calculo original con distinción entre abonos/deuda/recibido
+      filteredByQuincena.forEach((s) => {
         const amount = (s.valorCuota !== undefined && s.valorCuota !== null)
           ? s.valorCuota
           : ((s.valor !== undefined && s.valor !== null) ? s.valor : 0);
 
-        totalARecibir += amount;
-
-        if (s.tipo === 'PAGO_INICIAL' || s.tipo === 'PAGO_TOTAL' || s.estado === 'PAGADO') {
+        if (s.tipo !== 'ABONO') {
+          totalARecibir += amount;
+        }
+        if (
+          s.tipo === 'PAGO_INICIAL' ||
+          s.tipo === 'PAGO_TOTAL' ||
+          s.tipo === 'ABONO' ||
+          s.estado === 'PAGADO'
+        ) {
           totalRecibido += amount;
         }
-      }
-    });
+      });
+    } else if (paymentFilter === 'Pendientes') {
+      totalARecibir = totalVisible;
+      totalRecibido = 0;
+    } else {
+      // Pagados o Abonos: todo lo visible ya está recibido
+      totalARecibir = totalVisible;
+      totalRecibido = totalVisible;
+    }
 
     return {
       totalARecibir,
@@ -216,7 +294,7 @@ function Dashboard() {
       fechaInicio: period.inicio,
       fechaFin: period.fin
     };
-  }, [allStudents, quincenaFilter, selectedYear, selectedMonth]);
+  }, [filteredByQuincena, quincenaFilter, paymentFilter]);
 
   // Formatear rango de fechas
   const formatDateRange = (inicio, fin) => {
@@ -272,6 +350,17 @@ function Dashboard() {
             }}>
               <option value="1">Quincena 1 (1 - 15)</option>
               <option value="2">Quincena 2 (16 - 31)</option>
+            </select>
+
+            <label style={{ color: 'var(--color-gray-300)' }}>Mostrar:</label>
+            <select value={paymentFilter} onChange={(e) => {
+              setPaymentFilter(e.target.value);
+              setCurrentPage(1);
+            }}>
+              <option value="Todos">Todos</option>
+              <option value="Pendientes">Pendientes</option>
+              <option value="Pagados">Pagados</option>
+              <option value="Abonos">Abonos</option>
             </select>
           </div>
 

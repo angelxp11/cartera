@@ -108,6 +108,11 @@
   color: var(--color-warning-light);
 }
 
+.estado-abono {
+  background: var(--color-primary-dark);
+  color: #ffffff;
+}
+
 /* ===== PAGINACIÓN ===== */
 .pagination-container {
   display: flex;
