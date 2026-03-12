@@ -13,6 +13,7 @@ function Dashboard() {
   const [quincenaFilter, setQuincenaFilter] = useState('1'); // '1' = 1-15, '2' = 16-31
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('Todos'); // Todos, Pendientes, Pagados, Abonos
+  const [dateSourceFilter, setDateSourceFilter] = useState('FECHA_ABONO'); // FECHA_ABONO o FECHA_CUOTA
   const itemsPerPage = 10;
 
   // Generar lista de años disponibles (últimos 5 años y próximos 2)
@@ -65,6 +66,7 @@ function Dashboard() {
                     tipo: 'PAGO_INICIAL',
                     valor: cursoData.pagoInicial,
                     fechaPago: fechaRegistro,
+                    fechaCuota: fechaRegistro,
                     curso: cursoId,
                     cuotaKey: 'Pago Inicial',
                     estado: 'PAGADO', // El pago inicial siempre se recibe al registrar
@@ -108,6 +110,7 @@ function Dashboard() {
                     valorCuota: displayValue,
                     estado: cuota.estado || 'PENDIENTE',
                     fechaPago,
+                    fechaCuota: fechaPago,
                     cuotaKey,
                     responsable: cuota.responsable || '-',
                     factura: cuota.factura || '-',
@@ -133,6 +136,7 @@ function Dashboard() {
                         estado: 'ABONO',
                         tipo: 'ABONO',
                         fechaPago: fechaAbono,
+                        fechaCuota: fechaPago,
                         cuotaKey: `${cuotaKey} - Abono ${idx + 1}`,
                         responsable: abono.responsable || '-',
                         factura: abono.factura || '-',
@@ -153,6 +157,7 @@ function Dashboard() {
                   estado: 'PAGADO',
                   tipo: 'PAGO_TOTAL',
                   fechaPago: fechaRegistro,
+                  fechaCuota: fechaRegistro,
                   cuotaKey: 'Pago Total',
                   responsable: '-',
                   factura: '-',
@@ -205,10 +210,15 @@ function Dashboard() {
     const searchLower = searchTerm.toLowerCase();
 
     return allStudents.filter((s) => {
-      if (!s.fechaPago || !(s.fechaPago instanceof Date)) return false;
+      // Seleccionar la fecha a usar según el filtro de fuente de fecha
+      const fechaParaFiltro = dateSourceFilter === 'FECHA_CUOTA' 
+        ? (s.fechaCuota || s.fechaPago)
+        : (s.fechaPago || s.fechaCuota);
+
+      if (!fechaParaFiltro || !(fechaParaFiltro instanceof Date)) return false;
 
       // Verificar que la fecha esté dentro del rango de la quincena
-      const inRange = s.fechaPago >= period.inicio && s.fechaPago <= period.fin;
+      const inRange = fechaParaFiltro >= period.inicio && fechaParaFiltro <= period.fin;
       if (!inRange) return false;
 
       // Aplicar filtro de búsqueda si existe
@@ -234,7 +244,7 @@ function Dashboard() {
           return true;
       }
     });
-  }, [allStudents, quincenaFilter, selectedYear, selectedMonth, searchTerm, paymentFilter]);
+  }, [allStudents, quincenaFilter, selectedYear, selectedMonth, searchTerm, paymentFilter, dateSourceFilter]);
 
   // Paginación
   const totalPages = Math.ceil(filteredByQuincena.length / itemsPerPage);
@@ -361,6 +371,15 @@ function Dashboard() {
               <option value="Pendientes">Pendientes</option>
               <option value="Pagados">Pagados</option>
               <option value="Abonos">Abonos</option>
+            </select>
+
+            <label style={{ color: 'var(--color-gray-300)' }}>Filtrar por fecha:</label>
+            <select value={dateSourceFilter} onChange={(e) => {
+              setDateSourceFilter(e.target.value);
+              setCurrentPage(1);
+            }}>
+              <option value="FECHA_ABONO">Fecha de Abono</option>
+              <option value="FECHA_CUOTA">Fecha de Cuota</option>
             </select>
           </div>
 

@@ -313,7 +313,11 @@ function AggEstudiantes({ userName }) {
           anio += Math.floor(mes / 12);
           mes = mes % 12;
         }
-        let fecha = new Date(anio, mes, diaPago);
+        // Get last day of month to clamp day if needed
+        const firstOfMonth = new Date(anio, mes, 1);
+        const daysInMonth = new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth() + 1, 0).getDate();
+        const diaFinal = Math.min(diaPago, daysInMonth);
+        let fecha = new Date(anio, mes, diaFinal);
         lista.push({ numero: i + 1, fecha, valor: valorCuota });
       }
 
