@@ -119,6 +119,49 @@
   font-size: 14px;
 }
 
+.finan-cuota-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.finan-cuota-content {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.finan-cuota-edit-btn {
+  width: auto;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: #ffffff;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.finan-cuota-edit-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: #ffffff;
+  color: #ffffff;
+}
+
+.finan-cuota-edit-btn:hover {
+  background: var(--color-primary-darker);
+  border-color: var(--color-primary-darker);
+  transform: translateY(-1px);
+}
+
 .finan-cuotas-list li.finan-pagada {
   background: #065f46;
   color: #d1fae5;
@@ -138,8 +181,33 @@
 }
 
 .finan-btn-pay-cuota:hover {
-  background: var(--color-warning-dark);
+  background: var(--color-warning-light);
   transform: translateY(-2px);
+}
+
+/* ===== BOTON ELIMINAR CURSO ===== */
+.finan-btn-delete-course {
+  margin-top: 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #e11d48;
+  background: #ef4444;
+  color: #ffffff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  margin-left: 10px;
+}
+
+.finan-btn-delete-course:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(220, 38, 38, 0.35);
+}
+
+.finan-btn-delete-course:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
 }
 
 /* ===== FORMULARIO PAGO ===== */
@@ -269,10 +337,14 @@
 }
 
 .finan-modal-body {
-  padding: 25px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.finan-modal-body-financiamiento {
+  padding: 25px;
 }
 
 .finan-modal-label {
@@ -407,4 +479,15 @@
   color: #94a3b8;
   cursor: not-allowed;
   opacity: 0.6;
+}
+.eliminar-button {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: white;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.25s ease;
+  font-size: 13px;
 }

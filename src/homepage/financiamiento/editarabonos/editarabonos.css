@@ -1,0 +1,53 @@
+/* CONTENEDOR DEL BODY */
+.finan-modal-body.finan-modal-body-editarabonos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 10px 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* CADA BLOQUE DE ABONO */
+.finan-modal-body > div{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.08);
+}
+
+/* LABELS */
+.finan-modal-body label{
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 4px;
+}
+
+/* INPUTS */
+.finan-modal-body input{
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.2);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.finan-modal-body input:focus{
+  border-color: var(--color-primary, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+
+/* SCROLL BONITO */
+.finan-modal-body::-webkit-scrollbar{
+  width: 6px;
+}
+
+.finan-modal-body::-webkit-scrollbar-thumb{
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+}

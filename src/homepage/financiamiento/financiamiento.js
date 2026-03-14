@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../server/firebase';
 import { mostrarCarga, ocultarCarga } from '../../resources/carga/carga';
+import { FaPencilAlt } from 'react-icons/fa';
 import './financiamiento.css';
+import EditarAbonos from './editarabonos/editarabonos';
 
 function Financiamiento({ userName }) {
   const [ccBuscar, setCcBuscar] = useState('');
@@ -16,6 +18,9 @@ function Financiamiento({ userName }) {
   // control which course cards are expanded for accordion
   const [expandedCourses, setExpandedCourses] = useState({});
 
+  // for editing abonos
+  const [editCuota, setEditCuota] = useState(null);
+
   // helper to format numbers with thousands separators
   const formatNumber = (num) => {
     if (num === null || num === undefined || num === '') return '';
@@ -28,7 +33,7 @@ function Financiamiento({ userName }) {
   // en el lugar donde se renderiza. Esto evita el texto duplicado
   // "Cuota Cuota 4..." que aparecía anteriormente.
   const formatCuotaLabel = (key, cuota) => {
-    let label = `${key}`; // solo el número inicialmente
+    let label = key.replace('Cuota ', ''); // remove "Cuota " prefix
     if (cuota && cuota.fecha) {
       let fecha = cuota.fecha;
       if (fecha.toDate) fecha = fecha.toDate();
@@ -91,6 +96,44 @@ function Financiamiento({ userName }) {
     }));
   };
 
+  const eliminarCurso = async (cursoId) => {
+    const estudianteNombre = student.nombreCompleto || ccBuscar;
+    const confirm = window.confirm(`¿Estás seguro de que quieres eliminar el curso ${cursoId} del estudiante ${estudianteNombre}? `);
+    if (!confirm) return;
+
+    mostrarCarga();
+    try {
+      // First, update CURSOS to decrement estudiantesActivos
+      const cursoRef = doc(db, 'CURSOS', cursoId);
+      const cursoSnap = await getDoc(cursoRef);
+      if (cursoSnap.exists()) {
+        const currentCount = cursoSnap.data().estudiantesActivos || 0;
+        await updateDoc(cursoRef, {
+          estudiantesActivos: Math.max(0, currentCount - 1)
+        });
+      }
+
+      // Then, remove the course from the student
+      const ref = doc(db, 'ESTUDIANTES_ACTIVOS', ccBuscar.trim());
+      await updateDoc(ref, {
+        [`cursos.${cursoId}`]: deleteField()
+      });
+
+      // update local state
+      const updatedCourses = { ...courses };
+      delete updatedCourses[cursoId];
+      setCourses(updatedCourses);
+      setStudent({ ...student, cursos: updatedCourses });
+
+      alert('Curso eliminado correctamente');
+    } catch (err) {
+      console.error('Error eliminando curso', err);
+      alert('Error al eliminar el curso');
+    } finally {
+      ocultarCarga();
+    }
+  };
+
   const pagarCuota = async () => {
     if (!selectedCourse || selectedCuotas.length === 0) return;
     mostrarCarga();
@@ -120,6 +163,22 @@ function Financiamiento({ userName }) {
           totalSelected
         )}). El excedente se aplicará a las siguientes cuotas pendientes.`
       );
+    }
+
+    // Build confirmation message
+    let confirmMessage = 'Confirma el pago de ';
+    const cuotasText = selectedCuotas.map(k => {
+      const cuota = curso.cuotas[k];
+      const label = formatCuotaLabel(k, cuota);
+      const valor = cuota.valor;
+      return `$${formatNumber(valor)} de la Cuota ${label}`;
+    }).join(' y ');
+    confirmMessage += cuotasText + '?';
+
+    const confirm = window.confirm(confirmMessage);
+    if (!confirm) {
+      ocultarCarga();
+      return;
     }
 
     let remaining = amountToPay;
@@ -230,7 +289,25 @@ function Financiamiento({ userName }) {
           type="text"
           placeholder="Cédula del estudiante"
           value={ccBuscar}
-          onChange={(e) => setCcBuscar(e.target.value)}
+          onChange={(e) => {
+            const value = e.target.value.replace(/[^0-9]/g, ''); // solo números
+            setCcBuscar(value);
+            if (student) {
+              setStudent(null);
+              setCourses({});
+              setSelectedCourse(null);
+              setSelectedCuotas([]);
+              setPagoAmount('');
+              setFactura('');
+              setExpandedCourses({});
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              searchStudent();
+            }
+          }}
+          inputMode="numeric"
         />
         <button onClick={searchStudent}>Buscar</button>
       </div>
@@ -277,18 +354,32 @@ function Financiamiento({ userName }) {
                             key={key}
                             className={c.estado === 'PAGADO' ? 'finan-pagada' : ''}
                           >
-                            Cuota {formatCuotaLabel(key, c)}: ${formatNumber(c.valor)} - {c.estado}
-                            {c.abonos && c.abonos.length > 0 && (
-                              <span> (abonos: ${formatNumber(
-                                c.abonos.reduce((a, b) => a + (b.valor || 0), 0)
-                              )})</span>
-                            )}
-                            {c.estado === 'PAGADO' && (
-                              <span>
-                                {' '} (Responsable: {c.responsable || '-'} |
-                                Factura: {c.factura || '-'})
-                              </span>
-                            )}
+                            <div className="finan-cuota-row">
+                              <div className="finan-cuota-content">
+                                Cuota {formatCuotaLabel(key, c)}: ${formatNumber(c.valor)} - {c.estado}
+                                {c.abonos && c.abonos.length > 0 && (
+                                  <span> (abonos: ${formatNumber(
+                                    c.abonos.reduce((a, b) => a + (b.valor || 0), 0)
+                                  )})</span>
+                                )}
+                                {c.estado === 'PAGADO' && (
+                                  <span>
+                                    {' '} (Responsable: {c.responsable || '-'} |
+                                    Factura: {c.factura || '-'})
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                className="finan-cuota-edit-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditCuota({ cursoId: id, cuotaKey: key });
+                                }}
+                                title="Editar abonos"
+                              >
+                                <FaPencilAlt />
+                              </button>
+                            </div>
                           </li>
                         ))}
                       </ul>
@@ -301,6 +392,13 @@ function Financiamiento({ userName }) {
                           Pagar cuota
                         </button>
                       )}
+
+                      <button
+                        onClick={() => eliminarCurso(id)}
+                        className="finan-btn-delete-course"
+                      >
+                        Eliminar curso
+                      </button>
                     </>
                   )}
                 </div>
@@ -324,7 +422,7 @@ function Financiamiento({ userName }) {
               </button>
             </div>
 
-            <div className="finan-modal-body">
+            <div className="finan-modal-body finan-modal-body-financiamiento">
               <label className="finan-modal-label">
                 <span>Seleccione cuota(s):</span>
                 <div className="finan-cuota-selector">
@@ -410,6 +508,17 @@ function Financiamiento({ userName }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* MODAL PARA EDITAR ABONOS */}
+      {editCuota && (
+        <EditarAbonos
+          editCuota={editCuota}
+          courses={courses}
+          ccBuscar={ccBuscar}
+          onClose={() => setEditCuota(null)}
+          onUpdateCourses={setCourses}
+        />
       )}
     </div>
   );

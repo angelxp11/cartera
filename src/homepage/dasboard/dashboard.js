@@ -3,6 +3,7 @@ import './Dashboard.css';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../server/firebase';
 import { mostrarCarga, ocultarCarga } from '../../resources/carga/carga';
+import * as XLSX from "xlsx-js-style";
 
 function Dashboard() {
   const [allStudents, setAllStudents] = useState([]);
@@ -318,6 +319,215 @@ function Dashboard() {
     return `${String(fecha.getDate()).padStart(2, '0')}/${String(fecha.getMonth() + 1).padStart(2, '0')}/${fecha.getFullYear()}`;
   };
 
+  // Función para exportar a Excel
+  const exportToExcel = () => {
+
+  const grouped = new Map();
+
+  allStudents.forEach(student => {
+
+    const key = `${student.cc}-${student.curso}`;
+
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        cc: student.cc,
+        nombre: student.nombre,
+        celular: student.celular,
+        correo: student.correo,
+        curso: student.curso,
+        cuotas: new Map(),
+        valorPendiente: 0,
+        valorPagado: 0,
+        hasAbono: false
+      });
+    }
+
+    const group = grouped.get(key);
+    const valor = student.valorCuota || student.valor || 0;
+
+    if (student.estado === 'PENDIENTE') {
+      group.valorPendiente += valor;
+    }
+
+    if (
+      student.estado === 'PAGADO' ||
+      student.tipo === 'ABONO' ||
+      student.tipo === 'PAGO_TOTAL' ||
+      student.tipo === 'PAGO_INICIAL'
+    ) {
+
+      group.valorPagado += valor;
+
+      if (student.tipo === "ABONO") group.hasAbono = true;
+
+      if (student.cuotaKey?.startsWith("Cuota ")) {
+
+        const cuotaNum = parseInt(student.cuotaKey.replace("Cuota ", ""));
+
+        if (!group.cuotas.has(cuotaNum)) {
+          group.cuotas.set(cuotaNum, {
+            totalPaid: 0,
+            isAbono: false,
+            isFullPayment: false
+          });
+        }
+
+        const cuota = group.cuotas.get(cuotaNum);
+
+        cuota.totalPaid += valor;
+
+        if (student.tipo === "ABONO") cuota.isAbono = true;
+
+        if (student.estado === "PAGADO" && student.tipo !== "ABONO") {
+          cuota.isFullPayment = true;
+        }
+
+      }
+
+    }
+
+  });
+
+  let maxCuota = 0;
+
+  grouped.forEach(g => {
+    g.cuotas.forEach((_, num) => {
+      maxCuota = Math.max(maxCuota, num);
+    });
+  });
+
+  const data = Array.from(grouped.values()).map(info => {
+
+    const row = {
+      CC: info.cc,
+      Nombre: info.nombre,
+      Numero: info.celular,
+      Correo: info.correo,
+      Curso: info.curso,
+      "Valor Pagado": info.valorPagado,
+      "Valor Pendiente": info.valorPendiente
+    };
+
+    for (let i = 1; i <= maxCuota; i++) {
+      const cuota = info.cuotas.get(i);
+      row[`Cuota ${i}`] = cuota ? cuota.totalPaid : "";
+    }
+
+    return row;
+
+  });
+
+  const ws = XLSX.utils.json_to_sheet(data);
+
+  const headers = Object.keys(data[0]);
+
+  const green = "C6EFCE";
+  const yellow = "FFF2CC";
+  const headerColor = "1F4E78";
+
+  const groupedArray = Array.from(grouped.values());
+
+  const range = XLSX.utils.decode_range(ws['!ref']);
+
+  /* HEADER STYLE */
+
+  headers.forEach((h, i) => {
+
+    const cell = XLSX.utils.encode_cell({ r: 0, c: i });
+
+    ws[cell].s = {
+      fill: { fgColor: { rgb: headerColor } },
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      alignment: { horizontal: "center" },
+      border: {
+        top: { style: 'medium', color: { rgb: '000000' } },
+        bottom: { style: 'thin', color: { rgb: '000000' } },
+        left: i === 0 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } },
+        right: i === headers.length - 1 ? { style: 'medium', color: { rgb: '000000' } } : { style: 'thin', color: { rgb: '000000' } }
+      }
+    };
+
+  });
+
+  /* DATA STYLE */
+
+  for (let R = 1; R <= range.e.r; R++) {
+
+    const group = groupedArray[R - 1];
+
+    for (let C = 0; C < headers.length; C++) {
+
+      const colName = headers[C];
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      const cell = ws[addr];
+
+      if (!cell || cell.v === "") continue;
+
+      cell.z = '$#,##0';
+
+      if (!cell.s) cell.s = {};
+      cell.s.border = {
+        top: { style: 'thin', color: { rgb: '000000' } },
+        bottom: { style: 'thin', color: { rgb: '000000' } },
+        left: { style: 'thin', color: { rgb: '000000' } },
+        right: { style: 'thin', color: { rgb: '000000' } }
+      };
+
+      if (colName === "Valor Pagado") {
+
+        cell.s.fill = {
+          fgColor: {
+            rgb: group.hasAbono ? yellow : green
+          }
+        };
+
+      }
+
+      if (colName.startsWith("Cuota ")) {
+
+        const num = parseInt(colName.replace("Cuota ", ""));
+        const cuota = group.cuotas.get(num);
+
+        if (!cuota) continue;
+
+        cell.s.fill = {
+          fgColor: {
+            rgb: cuota.isAbono ? yellow : green
+          }
+        };
+
+      }
+
+    }
+
+  }
+
+  /* AUTO WIDTH */
+
+  const colWidths = headers.map(header => {
+
+    let maxLength = header.length;
+
+    data.forEach(row => {
+      const value = row[header];
+      if (value) {
+        maxLength = Math.max(maxLength, value.toString().length);
+      }
+    });
+
+    return { wch: maxLength + 4 };
+
+  });
+
+  ws['!cols'] = colWidths;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Cartera");
+
+  XLSX.writeFile(wb, "cartera.xlsx");
+
+};
+
   return (
     <div className="content-card">
       <h2>ESTUDIANTES ACTIVOS</h2>
@@ -420,6 +630,23 @@ function Dashboard() {
                 Limpiar
               </button>
             )}
+          </div>
+
+          <div style={{ marginTop: '15px', marginBottom: '15px' }}>
+            <button
+              onClick={exportToExcel}
+              style={{
+                background: 'var(--color-primary)',
+                color: 'var(--color-gray-900)',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: 'var(--border-radius-sm)',
+                cursor: 'pointer',
+                fontWeight: '600'
+              }}
+            >
+              Exportar Cartera
+            </button>
           </div>
 
           {/* ESTADÍSTICAS */}

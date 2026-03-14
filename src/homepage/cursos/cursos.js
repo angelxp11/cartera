@@ -9,11 +9,19 @@ function Cursos() {
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState('');
 
+  const courseTypes = [
+    'CONVALIDACION',
+    'HOME SCHOOL',
+    'TECNICOS LABORALES',
+    'PROGRAMAS MIXTOS',
+  ];
+
   const [form, setForm] = useState({
     nombre: '',
     valor: '',
     estudiantesActivos: '0',
-    description: ''
+    description: '',
+    tipoCurso: ''
   });
 
   // 🔹 Formatear ID tipo DESARROLLO_WEB_2026
@@ -56,7 +64,8 @@ function Cursos() {
       nombre: '',
       valor: '',
       estudiantesActivos: '0',
-      description: ''
+      description: '',
+      tipoCurso: ''
     });
   };
 
@@ -67,7 +76,8 @@ function Cursos() {
       nombre: c.nombre,
       valor: formatCurrency(c.valor),
       estudiantesActivos: String(c.estudiantesActivos || 0),
-      description: c.description
+      description: c.description,
+      tipoCurso: c.tipoCurso || ''
     });
   };
 
@@ -99,6 +109,13 @@ function Cursos() {
         description: value.toUpperCase()
       }));
     }
+
+    if (name === 'tipoCurso') {
+      setForm((prev) => ({
+        ...prev,
+        tipoCurso: value
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -124,13 +141,19 @@ function Cursos() {
       return setError('LA DESCRIPCIÓN ES OBLIGATORIA');
     }
 
+    if (!form.tipoCurso || !courseTypes.includes(form.tipoCurso)) {
+      ocultarCarga();
+      return setError('EL TIPO DE CURSO ES OBLIGATORIO');
+    }
+
     const idCurso = formatId(form.nombre);
 
     const payload = {
       nombre: form.nombre.trim(),
       valor: parseInt(unformatCurrency(form.valor), 10),
       estudiantesActivos: parseInt(form.estudiantesActivos || '0', 10),
-      description: form.description.trim()
+      description: form.description.trim(),
+      tipoCurso: form.tipoCurso
     };
 
     if (editing && editing !== idCurso) {
@@ -201,6 +224,20 @@ function Cursos() {
           style={{ flex: '1 0 200px' }}
         />
 
+        <select
+          name="tipoCurso"
+          value={form.tipoCurso}
+          onChange={handleChange}
+          style={{ width: 220 }}
+        >
+          <option value="" disabled>
+            SELECCIONAR TIPO DE CURSO
+          </option>
+          {courseTypes.map((tipo) => (
+            <option key={tipo} value={tipo}>{tipo}</option>
+          ))}
+        </select>
+
         <button type="submit">
           {editing ? 'GUARDAR' : 'CREAR'}
         </button>
@@ -219,6 +256,7 @@ function Cursos() {
                 {c.estudiantesActivos} ALUMNOS – $
                 {new Intl.NumberFormat('es-CO').format(c.valor)}
               </div>
+              <div>TIPO: {c.tipoCurso || 'CONVALIDACION'}</div>
               <div>{c.description}</div>
             </div>
 

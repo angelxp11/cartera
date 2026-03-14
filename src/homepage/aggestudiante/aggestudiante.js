@@ -7,7 +7,15 @@ import { mostrarCarga, ocultarCarga } from "../../resources/carga/carga";
 function AggEstudiantes({ userName }) {
   const [courses, setCourses] = useState([]);
   const [cronograma, setCronograma] = useState([]);
-  const [ccTimeout, setCcTimeout] = useState(null);
+
+  const courseTypes = [
+    'CONVALIDACION',
+    'HOME SCHOOL',
+    'TECNICOS LABORALES',
+    'PROGRAMAS MIXTOS'
+  ];
+
+  const [cursoFiltro, setCursoFiltro] = useState('ALL');
 
   const [form, setForm] = useState({
     nombreCompleto: "",
@@ -57,13 +65,48 @@ function AggEstudiantes({ userName }) {
       mostrarCarga();
       try {
         const snapshot = await getDocs(collection(db, "CURSOS"));
-        setCourses(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setCourses(snapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+          tipoCurso: (d.data().tipoCurso || 'CONVALIDACION')
+        })));
       } finally {
         ocultarCarga();
       }
     };
     fetchCourses();
   }, []);
+
+  // 🔹 MANEJAR BLUR EN CC
+  const handleCcBlur = async () => {
+    const cc = form.cc.trim();
+    if (!cc) return;
+
+    mostrarCarga();
+    try {
+      const estudianteExistente = await buscarEstudiante(cc);
+      if (estudianteExistente) {
+        setForm(prevForm => ({
+          ...prevForm,
+          nombreCompleto: estudianteExistente.nombreCompleto,
+          correo: estudianteExistente.correo,
+          celular: estudianteExistente.celular,
+          estudianteExistente: true
+        }));
+      } else {
+        alert("Estudiante no encontrado.");
+        setForm(prevForm => ({
+          ...prevForm,
+          estudianteExistente: false
+        }));
+      }
+    } catch (error) {
+      console.error("Error buscando estudiante:", error);
+      alert("Error al buscar el estudiante.");
+    } finally {
+      ocultarCarga();
+    }
+  };
 
   // 🔹 BUSCAR ESTUDIANTE POR CC
   const buscarEstudiante = async (cc) => {
@@ -182,34 +225,6 @@ function AggEstudiantes({ userName }) {
     } else if (name === "cc") {
       const digits = unformatNumber(value);
       next[name] = digits;
-      
-      // Clear previous timeout
-      if (ccTimeout) {
-        clearTimeout(ccTimeout);
-      }
-      
-      // Set new timeout - search after 5 seconds of no changes
-      const newTimeout = setTimeout(async () => {
-        if (digits && digits.length > 0) {
-          const estudianteExistente = await buscarEstudiante(digits);
-          if (estudianteExistente) {
-            setForm(prevForm => ({
-              ...prevForm,
-              nombreCompleto: estudianteExistente.nombreCompleto,
-              correo: estudianteExistente.correo,
-              celular: estudianteExistente.celular,
-              estudianteExistente: true
-            }));
-          } else {
-            setForm(prevForm => ({
-              ...prevForm,
-              estudianteExistente: false
-            }));
-          }
-        }
-      }, 5000);
-      
-      setCcTimeout(newTimeout);
     } else if (name === "celular") {
       const digits = unformatNumber(value);
       next[name] = digits;
@@ -620,6 +635,7 @@ function AggEstudiantes({ userName }) {
             name="cc"
             value={form.cc}
             onChange={handleChange}
+            onBlur={handleCcBlur}
             placeholder=""
             inputMode="numeric"
             required
@@ -629,13 +645,20 @@ function AggEstudiantes({ userName }) {
         <label className="field">
           <span className="label-text">CORREO ELECTRÓNICO</span>
           <input
-            name="correo"
-            type="email"
-            value={form.correo}
-            onChange={handleChange}
-            placeholder=""
-            required
-          />
+  name="correo"
+  type="email"
+  value={form.correo}
+  onChange={(e) =>
+    handleChange({
+      target: {
+        name: "correo",
+        value: e.target.value.toLowerCase()
+      }
+    })
+  }
+  placeholder=""
+  required
+/>
         </label>
 
         <label className="field">
@@ -661,12 +684,25 @@ function AggEstudiantes({ userName }) {
         </label>
 
         <label className="field">
+          <span className="label-text">FILTRAR POR TIPO DE CURSO</span>
+          <select
+            value={cursoFiltro}
+            onChange={(e) => setCursoFiltro(e.target.value)}
+          >
+            <option value="ALL">TODOS</option>
+            {courseTypes.map((tipo) => (
+              <option key={tipo} value={tipo}>{tipo}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="field">
           <span className="label-text">SELECCIONAR CURSO</span>
           <select name="cursoId" value={form.cursoId} onChange={handleChange}>
             <option value="">SELECCIONAR CURSO</option>
-            {courses.map((c) => (
+            {(cursoFiltro === 'ALL' ? courses : courses.filter((c) => c.tipoCurso === cursoFiltro)).map((c) => (
               <option key={c.id} value={c.id}>
-                {c.id}
+                {c.id} - {c.tipoCurso || 'CONVALIDACION'}
               </option>
             ))}
           </select>
