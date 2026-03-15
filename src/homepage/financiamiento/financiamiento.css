@@ -100,6 +100,25 @@
   border-color: #22c55e;
 }
 
+.finan-course-card-combo {
+  border: 2px dashed #fbbf24;
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.35);
+}
+
+.finan-course-card-single {
+  border: 2px dotted #38bdf8;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.2);
+}
+
+.finan-cambio-info {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fcd34d;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
 .finan-course-details {
   margin-top: 12px;
 }

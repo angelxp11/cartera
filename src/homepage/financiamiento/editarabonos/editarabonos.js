@@ -15,8 +15,36 @@ function EditarAbonos({ editCuota, courses, ccBuscar, onClose, onUpdateCourses }
 
   const handleAbonoChange = (index, field, value) => {
     const newAbonos = [...abonos];
-    newAbonos[index] = { ...newAbonos[index], [field]: value };
+    if (field === 'valor') {
+      const unformatted = unformatNumber(value);
+      newAbonos[index] = { ...newAbonos[index], [field]: unformatted };
+    } else {
+      newAbonos[index] = { ...newAbonos[index], [field]: value };
+    }
     setAbonos(newAbonos);
+  };
+
+  const formatDate = (dateValue) => {
+    if (!dateValue) return 'Sin fecha';
+    let date = dateValue;
+    if (date.toDate) date = date.toDate();
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return 'Fecha inválida';
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const formatNumber = (num) => {
+    if (num === null || num === undefined || num === '') return '';
+    // use spanish locale for commas as thousands separator
+    return new Intl.NumberFormat('es-ES').format(num);
+  };
+
+  const unformatNumber = (value) => {
+    if (value === null || value === undefined || value === '') return 0;
+    return Number(String(value).replace(/\./g, '').replace(/[^0-9]/g, ''));
   };
 
   const saveChanges = async () => {
@@ -77,12 +105,13 @@ function EditarAbonos({ editCuota, courses, ccBuscar, onClose, onUpdateCourses }
         <div className="finan-modal-body finan-modal-body-editarabonos">
           {abonos.map((abono, index) => (
             <div key={index} style={{ marginBottom: '10px' }}>
+              <p className="abono-fecha-label">Fecha del abono: {formatDate(abono.fecha)}</p>
               <label>
                 Valor:
                 <input
                   type="text"
-                  value={abono.valor || ''}
-                  onChange={(e) => handleAbonoChange(index, 'valor', parseInt(e.target.value.replace(/[^0-9]/g, '')) || 0)}
+                  value={abono.valor !== undefined ? formatNumber(abono.valor) : ''}
+                  onChange={(e) => handleAbonoChange(index, 'valor', e.target.value)}
                 />
               </label>
               <label>

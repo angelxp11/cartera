@@ -37,6 +37,13 @@
   transition: all 0.2s ease;
 }
 
+.abono-fecha-label {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
 .finan-modal-body input:focus{
   border-color: var(--color-primary, #3b82f6);
   box-shadow: 0 0 0 2px rgba(59,130,246,0.15);

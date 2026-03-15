@@ -7,6 +7,7 @@ import { mostrarCarga, ocultarCarga } from "../../resources/carga/carga";
 function AggEstudiantes({ userName }) {
   const [courses, setCourses] = useState([]);
   const [cronograma, setCronograma] = useState([]);
+  const [mostrarSegundoCurso, setMostrarSegundoCurso] = useState(false);
 
   const courseTypes = [
     'CONVALIDACION',
@@ -15,11 +16,13 @@ function AggEstudiantes({ userName }) {
     'PROGRAMAS MIXTOS'
   ];
 
-  const [cursoFiltro, setCursoFiltro] = useState('ALL');
+  const [cursoFiltro1, setCursoFiltro1] = useState('ALL');
+  const [cursoFiltro2, setCursoFiltro2] = useState('ALL');
 
   const [form, setForm] = useState({
     nombreCompleto: "",
     cursoId: "",
+    cursoId2: "",
     valorCurso: "", // now entered manually as formatted string
     cc: "",
     celular: "",
@@ -216,6 +219,8 @@ function AggEstudiantes({ userName }) {
     } else if (name === "cursoId") {
       // only store selection; valorCurso is entered manually
       next.cursoId = value;
+    } else if (name === "cursoId2") {
+      next.cursoId2 = value;
     } else if (name === "valorCurso") {
       const numeric = unformatNumber(value);
       next.valorCurso = numeric ? formatNumber(Number(numeric)) : "";
@@ -440,66 +445,112 @@ function AggEstudiantes({ userName }) {
       }
     }
 
-    // Get course data
-    const cursoSeleccionado = courses.find((c) => c.id === form.cursoId);
-    if (!cursoSeleccionado) {
-      alert("Curso no encontrado.");
+    // Get selected course data (uno o combo)
+    if (!form.cursoId || form.cursoId.trim() === "") {
+      alert("Debe seleccionar al menos un curso.");
+      ocultarCarga();
+      return;
+    }
+
+    if (form.cursoId2 && form.cursoId2.trim() !== "" && form.cursoId2 === form.cursoId) {
+      alert("El segundo curso no puede ser igual al primero.");
+      ocultarCarga();
+      return;
+    }
+
+    const selectedCourseIds = [form.cursoId];
+    if (form.cursoId2 && form.cursoId2.trim() !== "") {
+      selectedCourseIds.push(form.cursoId2);
+    }
+
+    const selectedCourses = selectedCourseIds
+      .map((id) => courses.find((c) => c.id === id))
+      .filter(Boolean);
+
+    if (selectedCourses.length !== selectedCourseIds.length) {
+      alert("Uno o más cursos seleccionados no existen.");
       ocultarCarga();
       return;
     }
 
     if (form.tipoPago === "TOTAL") {
       const pagoTotalNum = parseInt(unformatNumber(form.pagoTotal)) || 0;
-    const valorCursoNum = parseInt(unformatNumber(form.valorCurso)) || 0;
+      const valorCursoNum = parseInt(unformatNumber(form.valorCurso)) || 0;
       if (!pagoTotalNum || pagoTotalNum < valorCursoNum) {
         alert("Ingrese el pago total recibido (igual o mayor al valor del curso)." );
         ocultarCarga();
         return;
       }
 
-      // Prepare course data with payment info - exclude description and estudiantesActivos
-      const { description, estudiantesActivos, ...cursoDataBase } = cursoSeleccionado;
-      const cursoData = {
-        ...cursoDataBase,
-        tipoPago: "TOTAL",
-        pagoTotal: pagoTotalNum,
-        fechaRegistro: form.useFechaActual ? new Date() : parseLocalDate(form.fechaRegistro),
-        responsableRegistro: userName || '',
-        estado: "ACTIVO" // default estado when adding course
-      };
+      const cursosCantidad = selectedCourseIds.length;
+      const pagoPorCurso = Math.round(pagoTotalNum / cursosCantidad);
+      const facturaId = `FACT-${Date.now()}`;
+      const mixtoId = cursosCantidad > 1 ? `MIX-${Date.now()}` : null;
 
       const estudianteRef = doc(db, "ESTUDIANTES_ACTIVOS", form.cc);
       const estudianteExistente = await getDoc(estudianteRef);
+      const cursosExistentes = estudianteExistente.exists() ? estudianteExistente.data().cursos || {} : {};
+
+      selectedCourses.forEach((curso, idx) => {
+        const isPrincipal = !mixtoId || idx === 0;
+        const cursoData = {
+          cursoId: curso.id,
+          nombreCurso: curso.nombre || '',
+          tipoCurso: curso.tipoCurso || 'CONVALIDACION',
+          tipoPago: "TOTAL",
+          pagoTotal: isPrincipal ? pagoPorCurso : 0,
+          valorCurso: 0,
+          fechaRegistro: form.useFechaActual ? new Date() : parseLocalDate(form.fechaRegistro),
+          responsableRegistro: userName || '',
+          estado: isPrincipal ? "ACTIVO" : "INACTIVO",
+          combo: !!mixtoId,
+          cursosCombo: selectedCourseIds,
+          facturaTotal: pagoTotalNum,
+          facturaUnica: !!mixtoId,
+          mixto: mixtoId,
+          mixtoPrincipal: isPrincipal
+        };
+
+        if (mixtoId && !isPrincipal) {
+          cursoData.pagoInicial = 0;
+          cursoData.numeroCuotas = 0;
+          cursoData.saldoPendiente = 0;
+          cursoData.cuotas = {};
+        }
+
+        cursosExistentes[curso.id] = cursoData;
+      });
 
       if (estudianteExistente.exists()) {
-        // Update existing student with new course
-        const cursosExistentes = estudianteExistente.data().cursos || {};
-        cursosExistentes[form.cursoId] = cursoData;
-        
-        await updateDoc(estudianteRef, {
-          cursos: cursosExistentes
-        });
+        await updateDoc(estudianteRef, { cursos: cursosExistentes });
       } else {
-        // Create new student
         await setDoc(estudianteRef, {
           nombreCompleto: form.nombreCompleto,
           correo: form.correo,
           celular: form.celular,
-          cursos: {
-            [form.cursoId]: cursoData
-          },
+          cursos: cursosExistentes,
           status: "ACTIVO",
           fechaRegistro: form.useFechaActual ? new Date() : parseLocalDate(form.fechaRegistro)
         });
       }
 
-      // Increment estudiantesActivos en CURSOS
-      const cursoRef = doc(db, "CURSOS", form.cursoId);
-      const currentCount = cursoSeleccionado.estudiantesActivos || 0;
-      await updateDoc(cursoRef, {
-        estudiantesActivos: currentCount + 1
-      });
+      await Promise.all(selectedCourseIds.map(async (courseId) => {
+        const cursoRef = doc(db, "CURSOS", courseId);
+        const actual = courses.find((c) => c.id === courseId);
+        const currentCount = (actual?.estudiantesActivos || 0) + 1;
+        await updateDoc(cursoRef, { estudiantesActivos: currentCount });
+      }));
 
+      // store factura summary in student record
+      const facturaInfo = {
+        id: facturaId,
+        cursos: selectedCourseIds,
+        total: pagoTotalNum,
+        tipoPago: "TOTAL",
+        fecha: form.useFechaActual ? new Date() : parseLocalDate(form.fechaRegistro)
+      };
+
+      // No se crea registro de facturas en la colección de estudiante para cumplir requerimiento
       // show single-payment cronograma using registration date
       const inicio = form.useFechaActual ? new Date() : parseLocalDate(form.fechaRegistro);
       setCronograma([{ numero: 1, fecha: inicio, valor: pagoTotalNum }]);
@@ -509,6 +560,7 @@ function AggEstudiantes({ userName }) {
       setForm({
         nombreCompleto: "",
         cursoId: "",
+        cursoId2: "",
         valorCurso: "",
         cc: "",
         celular: "",
@@ -522,6 +574,7 @@ function AggEstudiantes({ userName }) {
         fechaRegistro: ""
       });
       setCronograma([]);
+      setMostrarSegundoCurso(false);
       return;
     }
 
@@ -538,6 +591,7 @@ function AggEstudiantes({ userName }) {
       const pagoInicialNum = parseInt(unformatNumber(form.pagoInicial)) || 0;
       const saldoPendiente = valorCursoNum - pagoInicialNum;
       const numeroCuotasNum = parseInt(unformatNumber(form.numeroCuotas)) || 0;
+      const facturaId = `FACT-${Date.now()}`;
 
       // Build cuotas map
       const cuotasMap = {};
@@ -549,58 +603,79 @@ function AggEstudiantes({ userName }) {
         };
       });
 
-      // Prepare course data with financing info
-      const { description, estudiantesActivos, ...cursoDataBase } = cursoSeleccionado;
-      const cursoData = {
-        ...cursoDataBase,
-        tipoPago: "FINANCIADO",
-        pagoInicial: pagoInicialNum,
-        numeroCuotas: numeroCuotasNum,
-        pagarElDia: form.quincena,
-        saldoPendiente: saldoPendiente,
-        cuotas: cuotasMap,
-        fechaRegistro: form.useFechaActual ? new Date() : parseLocalDate(form.fechaRegistro),
-        responsableRegistro: userName || '',
-        estado: "ACTIVO" // default estado when adding course
-      };
-
+      // Prepare course data with financing info for each selected course
       const estudianteRef = doc(db, "ESTUDIANTES_ACTIVOS", form.cc);
       const estudianteExistente = await getDoc(estudianteRef);
+      const cursosExistentes = estudianteExistente.exists() ? estudianteExistente.data().cursos || {} : {};
+      const mixtoId = selectedCourseIds.length > 1 ? `MIX-${Date.now()}` : null;
 
+      selectedCourses.forEach((curso, idx) => {
+        const isPrincipal = !mixtoId || idx === 0;
+
+        let cursoData = {
+          cursoId: curso.id,
+          nombreCurso: curso.nombre || '',
+          tipoCurso: curso.tipoCurso || 'CONVALIDACION',
+          tipoPago: "FINANCIADO",
+          pagoTotal: 0,
+          pagoInicial: isPrincipal ? pagoInicialNum : 0,
+          numeroCuotas: isPrincipal ? numeroCuotasNum : 0,
+          pagarElDia: form.quincena,
+          saldoPendiente: isPrincipal ? saldoPendiente : 0,
+          cuotas: isPrincipal ? cuotasMap : {},
+          fechaRegistro: form.useFechaActual ? new Date() : parseLocalDate(form.fechaRegistro),
+          responsableRegistro: userName || '',
+          estado: isPrincipal ? "ACTIVO" : "INACTIVO",
+          combo: !!mixtoId,
+          cursosCombo: selectedCourseIds,
+          facturaTotal: valorCursoNum,
+          facturaUnica: !!mixtoId,
+          mixto: mixtoId,
+          mixtoPrincipal: isPrincipal
+        };
+
+        if (!isPrincipal && mixtoId) {
+          cursoData.pagoTotal = 0;
+          cursoData.valorCurso = 0;
+        }
+
+        cursosExistentes[curso.id] = cursoData;
+      });
       if (estudianteExistente.exists()) {
-        // Update existing student with new course
-        const cursosExistentes = estudianteExistente.data().cursos || {};
-        cursosExistentes[form.cursoId] = cursoData;
-        
-        await updateDoc(estudianteRef, {
-          cursos: cursosExistentes
-        });
+        await updateDoc(estudianteRef, { cursos: cursosExistentes });
       } else {
-        // Create new student
         await setDoc(estudianteRef, {
           nombreCompleto: form.nombreCompleto,
           correo: form.correo,
           celular: form.celular,
-          cursos: {
-            [form.cursoId]: cursoData
-          },
+          cursos: cursosExistentes,
           status: "ACTIVO",
           fechaRegistro: form.useFechaActual ? new Date() : parseLocalDate(form.fechaRegistro)
         });
       }
 
-      // Increment estudiantesActivos en CURSOS
-      const cursoRef = doc(db, "CURSOS", form.cursoId);
-      const currentCount = cursoSeleccionado.estudiantesActivos || 0;
-      await updateDoc(cursoRef, {
-        estudiantesActivos: currentCount + 1
-      });
+      await Promise.all(selectedCourseIds.map(async (courseId) => {
+        const cursoRef = doc(db, "CURSOS", courseId);
+        const actual = courses.find((c) => c.id === courseId);
+        const currentCount = (actual?.estudiantesActivos || 0) + 1;
+        await updateDoc(cursoRef, { estudiantesActivos: currentCount });
+      }));
 
+      const facturaInfo = {
+        id: facturaId,
+        cursos: selectedCourseIds,
+        total: valorCursoNum,
+        tipoPago: "FINANCIADO",
+        fecha: form.useFechaActual ? new Date() : parseLocalDate(form.fechaRegistro)
+      };
+
+      // No se crea registro de facturas en la colección de estudiante para cumplir requerimiento
       alert("Estudiante agregado exitosamente con financiamiento.");
       // Reset form
       setForm({
         nombreCompleto: "",
         cursoId: "",
+        cursoId2: "",
         valorCurso: "",
         cc: "",
         celular: "",
@@ -614,6 +689,7 @@ function AggEstudiantes({ userName }) {
         fechaRegistro: ""
       });
       setCronograma([]);
+      setMostrarSegundoCurso(false);
       return;
     }
   } catch (error) {
@@ -684,10 +760,10 @@ function AggEstudiantes({ userName }) {
         </label>
 
         <label className="field">
-          <span className="label-text">FILTRAR POR TIPO DE CURSO</span>
+          <span className="label-text">FILTRAR POR TIPO DE CURSO 1</span>
           <select
-            value={cursoFiltro}
-            onChange={(e) => setCursoFiltro(e.target.value)}
+            value={cursoFiltro1}
+            onChange={(e) => setCursoFiltro1(e.target.value)}
           >
             <option value="ALL">TODOS</option>
             {courseTypes.map((tipo) => (
@@ -697,16 +773,55 @@ function AggEstudiantes({ userName }) {
         </label>
 
         <label className="field">
-          <span className="label-text">SELECCIONAR CURSO</span>
+          <span className="label-text">SELECCIONAR CURSO 1</span>
           <select name="cursoId" value={form.cursoId} onChange={handleChange}>
             <option value="">SELECCIONAR CURSO</option>
-            {(cursoFiltro === 'ALL' ? courses : courses.filter((c) => c.tipoCurso === cursoFiltro)).map((c) => (
+            {(cursoFiltro1 === 'ALL' ? courses : courses.filter((c) => c.tipoCurso === cursoFiltro1)).map((c) => (
               <option key={c.id} value={c.id}>
                 {c.id} - {c.tipoCurso || 'CONVALIDACION'}
               </option>
             ))}
           </select>
         </label>
+
+        <label className="field" style={{ alignItems: 'flex-end' }}>
+          <button
+            type="button"
+            className="btn-centrado"
+            onClick={() => setMostrarSegundoCurso(true)}
+          >
+            AGREGAR SEGUNDO CURSO
+          </button>
+        </label>
+
+        {mostrarSegundoCurso && (
+          <> 
+            <label className="field">
+              <span className="label-text">FILTRAR POR TIPO DE CURSO 2</span>
+              <select
+                value={cursoFiltro2}
+                onChange={(e) => setCursoFiltro2(e.target.value)}
+              >
+                <option value="ALL">TODOS</option>
+                {courseTypes.map((tipo) => (
+                  <option key={tipo} value={tipo}>{tipo}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="field">
+              <span className="label-text">SEGUNDO CURSO (COMBO)</span>
+              <select name="cursoId2" value={form.cursoId2} onChange={handleChange}>
+                <option value="">SELECCIONAR CURSO</option>
+                {(cursoFiltro2 === 'ALL' ? courses : courses.filter((c) => c.tipoCurso === cursoFiltro2)).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.id} - {c.tipoCurso || 'CONVALIDACION'}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
 
         {/* valor del curso manual */}
         <label className="field">

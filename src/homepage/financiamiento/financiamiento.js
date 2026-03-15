@@ -271,12 +271,18 @@ function Financiamiento({ userName }) {
     }
   };
 
+  const getCuotaNumber = (key) => {
+    const match = String(key).match(/\d+/);
+    return match ? parseInt(match[0], 10) : Number.MAX_SAFE_INTEGER;
+  };
+
   const pendingCuotasForCourse = (cursoId) => {
     const curso = courses[cursoId];
     if (!curso || !curso.cuotas) return [];
 
     return Object.entries(curso.cuotas)
       .filter(([, c]) => c.estado === 'PENDIENTE')
+      .sort(([a], [b]) => getCuotaNumber(a) - getCuotaNumber(b))
       .map(([k]) => k);
   };
 
@@ -323,18 +329,31 @@ function Financiamiento({ userName }) {
         <div className="finan-courses-list">
           <h3>Cursos del estudiante</h3>
 
-          {Object.entries(courses).map(([id, curso]) => (
+          {Object.entries(courses)
+            .filter(([id, curso]) => !curso.mixto || curso.mixtoPrincipal)
+            .map(([id, curso]) => (
             <div
               key={id}
-              className={`finan-course-card ${expandedCourses[id] ? 'expanded' : ''}`}
+              className={`finan-course-card ${expandedCourses[id] ? 'expanded' : ''} ${curso.combo ? 'finan-course-card-combo' : 'finan-course-card-single'}`}
               onClick={() => toggleCourse(id)}
             >
-              <p>
-                <strong>Curso:</strong> {id}
-              </p>
+              {curso.cursosCombo && curso.cursosCombo.length > 1 && (
+                <div className="finan-cambio-info">
+                  <p><strong>Combo:</strong> {curso.cursosCombo.join(', ')}</p>
+                  <p><strong>Curso principal:</strong> {id}</p>
+                </div>
+              )}
+              {!curso.combo && (
+                <p>
+                  <strong>Nombre del curso:</strong> {curso.nombreCurso || id}
+                </p>
+              )}
               <p>
                 <strong>Tipo de pago:</strong> {curso.tipoPago}
               </p>
+              {curso.combo && curso.mixtoPrincipal && (
+                <p><strong>Combo Mixto:</strong> {curso.cursosCombo?.join(', ') || 'N/A'}</p>
+              )}
 
               {expandedCourses[id] && (
                 <div className="finan-course-details" onClick={(e) => e.stopPropagation()}>
@@ -349,7 +368,9 @@ function Financiamiento({ userName }) {
                       <p>Número cuotas: {curso.numeroCuotas}</p>
 
                       <ul className="finan-cuotas-list">
-                        {Object.entries(curso.cuotas || {}).map(([key, c]) => (
+                        {Object.entries(curso.cuotas || {})
+                          .sort(([a], [b]) => getCuotaNumber(a) - getCuotaNumber(b))
+                          .map(([key, c]) => (
                           <li
                             key={key}
                             className={c.estado === 'PAGADO' ? 'finan-pagada' : ''}

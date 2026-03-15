@@ -26,6 +26,17 @@ function Dashboard() {
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
   ];
 
+  const formatMixedCourseName = (cursoData, cursoId) => {
+    if (!cursoData) return cursoId;
+
+    const baseCourse = cursoData.nombreCurso || cursoId;
+    if (cursoData.cursosCombo && cursoData.cursosCombo.length > 1) {
+      return `${cursoData.cursosCombo.join(' + ')}`;
+    }
+
+    return baseCourse;
+  };
+
   // Formatear número
   const formatNumber = (num) => {
     if (!num && num !== 0) return '';
@@ -55,6 +66,8 @@ function Dashboard() {
                 fechaRegistro = cursoData.fechaRegistro.toDate ? cursoData.fechaRegistro.toDate() : new Date(cursoData.fechaRegistro);
               }
 
+              const courseName = formatMixedCourseName(cursoData, cursoId);
+
               // Si es financiado, procesar cada cuota
               if (cursoData.tipoPago === 'FINANCIADO' && cursoData.cuotas) {
                 // Guardar info del pago inicial
@@ -69,6 +82,7 @@ function Dashboard() {
                     fechaPago: fechaRegistro,
                     fechaCuota: fechaRegistro,
                     curso: cursoId,
+                    cursoNombre: courseName,
                     cuotaKey: 'Pago Inicial',
                     estado: 'PAGADO', // El pago inicial siempre se recibe al registrar
                     responsable: '-',
@@ -77,7 +91,7 @@ function Dashboard() {
                   });
                 }
 
-                // Procesar cada cuota
+              // Procesar cada cuota
                 Object.entries(cursoData.cuotas).forEach(([cuotaKey, cuota]) => {
                   // Convertir timestamp de Firebase a Date
                   let fechaPago = null;
@@ -108,6 +122,7 @@ function Dashboard() {
                     celular: estudiante.celular || '',
                     correo: estudiante.correo || '',
                     curso: cursoId,
+                    cursoNombre: courseName,
                     valorCuota: displayValue,
                     estado: cuota.estado || 'PENDIENTE',
                     fechaPago,
@@ -133,6 +148,7 @@ function Dashboard() {
                         celular: estudiante.celular || '',
                         correo: estudiante.correo || '',
                         curso: cursoId,
+                        cursoNombre: courseName,
                         valorCuota: abono.valor || 0,
                         estado: 'ABONO',
                         tipo: 'ABONO',
@@ -154,6 +170,7 @@ function Dashboard() {
                   celular: estudiante.celular || '',
                   correo: estudiante.correo || '',
                   curso: cursoId,
+                  cursoNombre: courseName,
                   valorCuota: cursoData.pagoTotal || 0,
                   estado: 'PAGADO',
                   tipo: 'PAGO_TOTAL',
@@ -335,6 +352,7 @@ function Dashboard() {
         celular: student.celular,
         correo: student.correo,
         curso: student.curso,
+        cursoNombre: student.cursoNombre || student.curso,
         cuotas: new Map(),
         valorPendiente: 0,
         valorPagado: 0,
@@ -343,6 +361,9 @@ function Dashboard() {
     }
 
     const group = grouped.get(key);
+    if (!group.cursoNombre && student.cursoNombre) {
+      group.cursoNombre = student.cursoNombre;
+    }
     const valor = student.valorCuota || student.valor || 0;
 
     if (student.estado === 'PENDIENTE') {
@@ -403,7 +424,7 @@ function Dashboard() {
       Nombre: info.nombre,
       Numero: info.celular,
       Correo: info.correo,
-      Curso: info.curso,
+      Curso: info.cursoNombre || info.curso,
       "Valor Pagado": info.valorPagado,
       "Valor Pendiente": info.valorPendiente
     };
@@ -702,7 +723,7 @@ function Dashboard() {
                     <td>{s.nombre}</td>
                     <td>{s.celular}</td>
                     <td>{s.correo}</td>
-                    <td>{s.curso}</td>
+                    <td>{s.cursoNombre || s.curso}</td>
                     <td>
                       {s.tipo === 'PAGO_INICIAL' ? 'Pago Inicial' : s.cuotaKey}
                     </td>
