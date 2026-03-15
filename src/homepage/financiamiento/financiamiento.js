@@ -98,30 +98,54 @@ function Financiamiento({ userName }) {
 
   const eliminarCurso = async (cursoId) => {
     const estudianteNombre = student.nombreCompleto || ccBuscar;
-    const confirm = window.confirm(`¿Estás seguro de que quieres eliminar el curso ${cursoId} del estudiante ${estudianteNombre}? `);
+    const curso = courses[cursoId];
+
+    let comboText = cursoId;
+    if (curso && curso.cursosCombo && curso.cursosCombo.length > 1) {
+      const nombres = curso.cursosCombo.map((comboId) => {
+        const cursoInfo = courses[comboId];
+        return (cursoInfo && cursoInfo.nombreCurso) ? cursoInfo.nombreCurso : comboId;
+      });
+      comboText = `Combo "${nombres.join(' + ')}"`;
+    }
+
+    const confirm = window.confirm(`¿Estás seguro de que quieres eliminar ${comboText} del estudiante ${estudianteNombre}?`);
     if (!confirm) return;
 
     mostrarCarga();
     try {
-      // First, update CURSOS to decrement estudiantesActivos
-      const cursoRef = doc(db, 'CURSOS', cursoId);
-      const cursoSnap = await getDoc(cursoRef);
-      if (cursoSnap.exists()) {
-        const currentCount = cursoSnap.data().estudiantesActivos || 0;
-        await updateDoc(cursoRef, {
-          estudiantesActivos: Math.max(0, currentCount - 1)
+      const curso = courses[cursoId];
+      const cursosAEliminar = new Set([cursoId]);
+
+      if (curso && curso.cursosCombo && Array.isArray(curso.cursosCombo)) {
+        curso.cursosCombo.forEach((comboId) => {
+          if (comboId) cursosAEliminar.add(comboId);
         });
       }
 
-      // Then, remove the course from the student
-      const ref = doc(db, 'ESTUDIANTES_ACTIVOS', ccBuscar.trim());
-      await updateDoc(ref, {
-        [`cursos.${cursoId}`]: deleteField()
-      });
+      // Decrementar estudiantesActivos en cada curso eliminado
+      for (let id of cursosAEliminar) {
+        const cursoRef = doc(db, 'CURSOS', id);
+        const cursoSnap = await getDoc(cursoRef);
+        if (cursoSnap.exists()) {
+          const currentCount = cursoSnap.data().estudiantesActivos || 0;
+          await updateDoc(cursoRef, {
+            estudiantesActivos: Math.max(0, currentCount - 1)
+          });
+        }
+      }
 
-      // update local state
+      // Remove all courses in combo from student record
+      const ref = doc(db, 'ESTUDIANTES_ACTIVOS', ccBuscar.trim());
+      const deleteUpdates = {};
+      cursosAEliminar.forEach((id) => {
+        deleteUpdates[`cursos.${id}`] = deleteField();
+      });
+      await updateDoc(ref, deleteUpdates);
+
+      // Update local state
       const updatedCourses = { ...courses };
-      delete updatedCourses[cursoId];
+      cursosAEliminar.forEach((id) => delete updatedCourses[id]);
       setCourses(updatedCourses);
       setStudent({ ...student, cursos: updatedCourses });
 
