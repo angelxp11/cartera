@@ -44,26 +44,31 @@ function Login({ onLogin }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Validar que sea admin consultando Firestore
-      const adminDocRef = doc(db, 'ADMINISTRADORES', 'ADMINISTRADORES');
-      const adminDocSnap = await getDoc(adminDocRef);
+      // Validar rol consultando Firestore
+      const roles = ['ADMINISTRADORES', 'ASESOR'];
+      let roleFound = null;
 
-      if (!adminDocSnap.exists()) {
-        setError('Documento de administradores no encontrado');
+      for (const role of roles) {
+        const docRef = doc(db, 'ADMINISTRADORES', role);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data && data[user.email]) {
+            roleFound = role;
+            break;
+          }
+        }
+      }
+
+      if (!roleFound) {
+        setError('No tienes permiso. Solo usuarios autorizados pueden acceder.');
         setLoading(false);
         return;
       }
 
-      const adminData = adminDocSnap.data();
-      // Buscar si el email existe como clave en el objeto adminData
-      if (!adminData || !adminData[user.email]) {
-        setError('No tienes permiso. Solo administradores pueden acceder.');
-        setLoading(false);
-        return;
-      }
-
-      // Si es admin, llamar a onLogin con el email
-      onLogin(user.email);
+      // Si tiene rol, llamar a onLogin con el email y el rol
+      onLogin(user.email, roleFound);
     } catch (err) {
       console.error('Error:', err);
       if (err.code === 'auth/user-not-found') {

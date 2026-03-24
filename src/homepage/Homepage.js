@@ -9,9 +9,10 @@ import Dashboard from './dasboard/dashboard';
 import AggEstudiante from './aggestudiante/aggestudiante';
 import Cursos from './cursos/cursos';
 import Financiamiento from './financiamiento/financiamiento';
+import Interesados from './interesados/interesados';
 import './Homepage.css';
 
-function Homepage({ userEmail, onLogout }) {
+function Homepage({ userEmail, userRole, onLogout }) {
   const [isOpen, setIsOpen] = useState(true);
   const [view, setView] = useState('dashboard');
   const [userName, setUserName] = useState('');
@@ -39,7 +40,7 @@ function Homepage({ userEmail, onLogout }) {
     const fetchAdminName = async () => {
       mostrarCarga();
       try {
-        const adminDocRef = doc(db, 'ADMINISTRADORES', 'ADMINISTRADORES');
+        const adminDocRef = doc(db, 'ADMINISTRADORES', userRole);
         const adminDocSnap = await getDoc(adminDocRef);
         if (adminDocSnap.exists()) {
           const adminData = adminDocSnap.data();
@@ -87,7 +88,7 @@ function Homepage({ userEmail, onLogout }) {
 
   return (
     <div className="homepage-container" style={{ paddingLeft: isOpen ? '250px' : '80px', transition: 'padding-left var(--transition-normal)' }}>
-      <Sidebar userEmail={userEmail} onLogout={onLogout} isOpen={isOpen} toggleSidebar={toggleSidebar} onNavigate={setView} activeView={view} />
+      <Sidebar userEmail={userEmail} userRole={userRole} onLogout={onLogout} isOpen={isOpen} toggleSidebar={toggleSidebar} onNavigate={setView} activeView={view} />
       <div className="homepage-content">
         <header className="homepage-header">
           <h1>¡Bienvenido, {userName}!</h1>
@@ -98,6 +99,7 @@ function Homepage({ userEmail, onLogout }) {
           {view === 'add' && <AggEstudiante onAdd={addStudent} userName={userName} />}
           {view === 'courses' && <Cursos />}
           {view === 'financiamiento' && <Financiamiento userName={userName} />}
+          {view === 'interesados' && <Interesados userRole={userRole} />}
         </main>
       </div>
     </div>
