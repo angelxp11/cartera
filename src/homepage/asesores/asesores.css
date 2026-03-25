@@ -1,0 +1,70 @@
+.asesores-container {
+  padding: 20px;
+  background-color: var(--color-gray-800);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.asesores-container h1 {
+  color: var(--color-gray-50);
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+
+.asesores-container p {
+  color: var(--color-gray-400);
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: var(--color-gray-400);
+  font-size: 16px;
+}
+
+.error {
+  color: #ef4444;
+  text-align: center;
+  padding: 20px;
+}
+
+.asesores-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background-color: var(--color-gray-900);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.asesores-table thead {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.asesores-table th {
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--color-primary-dark);
+  min-width: 150px;
+}
+
+.asesores-table th:last-child {
+  min-width: 180px;
+}
+
+.asesores-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--color-gray-700);
+  color: var(--color-gray-50);
+}
+
+.asesores-table tbody tr:hover {
+  background-color: var(--color-gray-800);
+  transition: background-color var(--transition-normal);
+}
+
+.asesores-table tbody tr:last-child td {
+  border-bottom: none;
+}

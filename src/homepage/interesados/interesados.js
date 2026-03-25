@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../server/firebase';
 import * as XLSX from 'xlsx';
+import logo from '../../resources/images/logo.png';
 import './interesados.css';
 
-function Interesados({ userRole }) {
+function Interesados({ userRole, userEmail }) {
   const [interesados, setInteresados] = useState([]); // ahora será un array de objetos {email, name}
   const [asesores, setAsesores] = useState([]); // ahora será un array de objetos {email, name}
   const [asesoresMap, setAsesoresMap] = useState({}); // mapa email -> name
@@ -70,8 +71,11 @@ function Interesados({ userRole }) {
     const data = [];
 
     interesados.forEach(interesado => {
-      const fecha = interesado.fecha ? new Date(interesado.fecha.seconds * 1000) : new Date();
-      const fechaStr = `${fecha.getDate()} ${fecha.toLocaleString('es-ES', { month: 'long' })} ${fecha.getFullYear()}`;
+      const parts = interesado.id.split('_');
+      const dia = parts[0];
+      const mes = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][parseInt(parts[1]) - 1];
+      const año = parts[2];
+      const fechaStr = `${dia} ${mes} ${año}`;
 
       Object.entries(interesado).forEach(([key, value]) => {
         if (key === 'fecha' || key === 'creado' || key === 'id') {
@@ -84,7 +88,8 @@ function Interesados({ userRole }) {
             'Nombre': value.nombre || 'Dato no registrado',
             'Teléfono': value.telefono || 'Dato no registrado',
             'Correo': value.correo || 'Dato no registrado',
-            'Asesor Asignado': value.asesorasignado ? (asesoresMap[value.asesorasignado] || value.asesorasignado) : 'No asignado'
+            'Asesor Asignado': value.asesorasignado ? (asesoresMap[value.asesorasignado] || value.asesorasignado) : 'No asignado',
+            'Fecha de Asignación': value.fechaAsignacion ? new Date(value.fechaAsignacion).toLocaleDateString('es-CO') : 'No asignado'
           };
           data.push(row);
         }
@@ -117,7 +122,8 @@ function Interesados({ userRole }) {
           ...currentData,
           [userKey]: {
             ...currentData[userKey],
-            asesorasignado: asesorEmail
+            asesorasignado: asesorEmail,
+            fechaAsignacion: new Date().toISOString()
           }
         };
         
@@ -130,7 +136,8 @@ function Interesados({ userRole }) {
                 ...int, 
                 [userKey]: {
                   ...int[userKey],
-                  asesorasignado: asesorEmail
+                  asesorasignado: asesorEmail,
+                  fechaAsignacion: new Date().toISOString()
                 }
               } 
             : int
@@ -173,6 +180,9 @@ function Interesados({ userRole }) {
         if (key === 'fecha' || key === 'creado' || key === 'id') return true; // mantener propiedades del documento
         if (typeof value !== 'object' || value === null) return false;
 
+        // Para ASESOR, solo mostrar interesados asignados a él
+        if (userRole === 'ASESOR' && value.asesorasignado !== userEmail) return false;
+
         if (filtroAsesor === 'asignados') {
           return value.asesorasignado;
         } else if (filtroAsesor === 'no-asignados') {
@@ -194,7 +204,7 @@ function Interesados({ userRole }) {
     }).filter(Boolean);
   };
 
-  if (userRole !== 'ADMINISTRADORES') {
+  if (!['ADMINISTRADORES', 'ASESOR'].includes(userRole)) {
     return <div>No tienes permisos para ver esta sección.</div>;
   }
 
@@ -213,57 +223,70 @@ function Interesados({ userRole }) {
   const { asignados, noAsignados, total } = calcularEstadisticas();
   const interesadosFiltrados = filtrarInteresados();
 
+  if (interesadosFiltrados.length === 0) {
+    return (
+      <div className="interesados-container">
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <img src={logo} alt="Logo" style={{ maxWidth: '200px' }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="interesados-container">
       <div className="interesados-header">
-        <h2>Interesados</h2>
-        <button className="export-btn" onClick={handleExport}>
-          Exportar a Excel
-        </button>
+        <h2>{userRole === 'ASESOR' ? 'Mis Interesados' : 'Interesados'}</h2>
+        {userRole === 'ADMINISTRADORES' && (
+          <button className="export-btn" onClick={handleExport}>
+            Exportar a Excel
+          </button>
+        )}
       </div>
 
-      {/* Estadísticas y Filtros */}
-      <div className="filtro-section">
-        <div className="estadisticas">
-          <span className="stat-item">
-            <strong>Total:</strong> {total}
-          </span>
-          <span className="stat-item asignados">
-            <strong>Asignados:</strong> {asignados}
-          </span>
-          <span className="stat-item no-asignados">
-            <strong>No Asignados:</strong> {noAsignados}
-          </span>
-        </div>
+      {userRole === 'ADMINISTRADORES' && (
+        <div className="filtro-section">
+          <div className="estadisticas">
+            <span className="stat-item">
+              <strong>Total:</strong> {total}
+            </span>
+            <span className="stat-item asignados">
+              <strong>Asignados:</strong> {asignados}
+            </span>
+            <span className="stat-item no-asignados">
+              <strong>No Asignados:</strong> {noAsignados}
+            </span>
+          </div>
 
-        <div className="filtro-buttons">
-          <button
-            className={`filtro-btn ${filtroAsesor === 'todos' ? 'active' : ''}`}
-            onClick={() => setFiltroAsesor('todos')}
-          >
-            Todos ({total})
-          </button>
-          <button
-            className={`filtro-btn ${filtroAsesor === 'asignados' ? 'active' : ''}`}
-            onClick={() => setFiltroAsesor('asignados')}
-          >
-            Asignados ({asignados})
-          </button>
-          <button
-            className={`filtro-btn ${filtroAsesor === 'no-asignados' ? 'active' : ''}`}
-            onClick={() => setFiltroAsesor('no-asignados')}
-          >
-            No Asignados ({noAsignados})
-          </button>
+          <div className="filtro-buttons">
+            <button
+              className={`filtro-btn ${filtroAsesor === 'todos' ? 'active' : ''}`}
+              onClick={() => setFiltroAsesor('todos')}
+            >
+              Todos ({total})
+            </button>
+            <button
+              className={`filtro-btn ${filtroAsesor === 'asignados' ? 'active' : ''}`}
+              onClick={() => setFiltroAsesor('asignados')}
+            >
+              Asignados ({asignados})
+            </button>
+            <button
+              className={`filtro-btn ${filtroAsesor === 'no-asignados' ? 'active' : ''}`}
+              onClick={() => setFiltroAsesor('no-asignados')}
+            >
+              No Asignados ({noAsignados})
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="interesados-grid">
         {interesadosFiltrados.map(interesado => {
-          const fecha = interesado.fecha ? new Date(interesado.fecha.seconds * 1000) : new Date();
-          const dia = fecha.getDate();
-          const mes = fecha.toLocaleString('es-ES', { month: 'long' });
-          const año = fecha.getFullYear();
+          const parts = interesado.id.split('_');
+          const dia = parts[0];
+          const mes = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'][parseInt(parts[1]) - 1];
+          const año = parts[2];
 
           // Obtener todos los campos de tipo mapa (usuarios)
           const usuarios = Object.entries(interesado).filter(([key, value]) =>
@@ -283,12 +306,14 @@ function Interesados({ userRole }) {
                       <p><strong>Nombre:</strong> {value.nombre || 'Dato no registrado'}</p>
                       <p><strong>Teléfono:</strong> {value.telefono || 'Dato no registrado'}</p>
                       <p><strong>Correo:</strong> {value.correo || 'Dato no registrado'}</p>
-                      <button
-                        className="assign-btn"
-                        onClick={() => setAssigning(assigning === `${interesado.id}-${key}` ? null : `${interesado.id}-${key}`)}
-                      >
-                        Asignar Asesor
-                      </button>
+                      {userRole === 'ADMINISTRADORES' && (
+                        <button
+                          className="assign-btn"
+                          onClick={() => setAssigning(assigning === `${interesado.id}-${key}` ? null : `${interesado.id}-${key}`)}
+                        >
+                          Asignar Asesor
+                        </button>
+                      )}
                       {assigning === `${interesado.id}-${key}` && (
                         <select
                           onChange={(e) => {
@@ -305,7 +330,12 @@ function Interesados({ userRole }) {
                         </select>
                       )}
                       {value.asesorasignado && (
-                        <p><strong>Asesor Asignado:</strong> {asesoresMap[value.asesorasignado] || value.asesorasignado}</p>
+                        <div>
+                          <p><strong>Asesor Asignado:</strong> {asesoresMap[value.asesorasignado] || value.asesorasignado}</p>
+                          {value.fechaAsignacion && (
+                            <p><strong>Fecha de Asignación:</strong> {new Date(value.fechaAsignacion).toLocaleDateString('es-CO')}</p>
+                          )}
+                        </div>
                       )}
                     </div>
                     {index < usuarios.length - 1 && <hr className="usuario-divider" />}

@@ -48,6 +48,20 @@
   transition: box-shadow var(--transition-normal);
 }
 
+.welcome-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  flex-direction: column;
+}
+
+.welcome-logo {
+  max-width: 400px;
+  max-height: 400px;
+  opacity: 0.8;
+}
+
 .content-card:hover {
   box-shadow: var(--shadow-lg);
 }

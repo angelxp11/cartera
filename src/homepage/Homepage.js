@@ -10,11 +10,13 @@ import AggEstudiante from './aggestudiante/aggestudiante';
 import Cursos from './cursos/cursos';
 import Financiamiento from './financiamiento/financiamiento';
 import Interesados from './interesados/interesados';
+import Asesores from './asesores/asesores';
+import logo from '../resources/images/logo.png';
 import './Homepage.css';
 
 function Homepage({ userEmail, userRole, onLogout }) {
   const [isOpen, setIsOpen] = useState(true);
-  const [view, setView] = useState('dashboard');
+  const [view, setView] = useState('');
   const [userName, setUserName] = useState('');
 
   const [students, setStudents] = useState([
@@ -95,11 +97,13 @@ function Homepage({ userEmail, userRole, onLogout }) {
           <p>Usuario: {userEmail}</p>
         </header>
         <main className="homepage-main">
+          {view === '' && <div className="welcome-screen"><img src={logo} alt="Logo de la Empresa" className="welcome-logo" /></div>}
           {view === 'dashboard' && <Dashboard students={students} />}
           {view === 'add' && <AggEstudiante onAdd={addStudent} userName={userName} />}
           {view === 'courses' && <Cursos />}
           {view === 'financiamiento' && <Financiamiento userName={userName} />}
-          {view === 'interesados' && <Interesados userRole={userRole} />}
+          {view === 'interesados' && userRole === 'ADMINISTRADORES' && <Interesados userRole={userRole} />}
+          {view === 'interesados' && userRole === 'ASESOR' && <Asesores userEmail={userEmail} />}
         </main>
       </div>
     </div>

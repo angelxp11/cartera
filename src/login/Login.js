@@ -45,27 +45,22 @@ function Login({ onLogin }) {
       const user = userCredential.user;
 
       // Validar rol consultando Firestore
-      const roles = ['ADMINISTRADORES', 'ASESOR'];
-      let roleFound = null;
+      let roleFound = 'ASESOR'; // Por defecto asesor
 
-      for (const role of roles) {
-        const docRef = doc(db, 'ADMINISTRADORES', role);
-        const docSnap = await getDoc(docRef);
+      // Primero verificar si es administrador
+      const adminDocRef = doc(db, 'ADMINISTRADORES', 'ADMINISTRADORES');
+      const adminDocSnap = await getDoc(adminDocRef);
 
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data && data[user.email]) {
-            roleFound = role;
-            break;
-          }
+      if (adminDocSnap.exists()) {
+        const data = adminDocSnap.data();
+        if (data && data[user.email]) {
+          roleFound = 'ADMINISTRADORES';
         }
       }
 
-      if (!roleFound) {
-        setError('No tienes permiso. Solo usuarios autorizados pueden acceder.');
-        setLoading(false);
-        return;
-      }
+      // Guardar credenciales y rol en localStorage
+      localStorage.setItem('userEmail', user.email);
+      localStorage.setItem('userRole', roleFound);
 
       // Si tiene rol, llamar a onLogin con el email y el rol
       onLogin(user.email, roleFound);

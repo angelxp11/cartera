@@ -17,25 +17,39 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUserEmail(user.email);
-        // Obtener rol consultando Firestore
-        const roles = ['ADMINISTRADORES', 'ASESOR'];
-        let roleFound = null;
-        for (const role of roles) {
-          const docRef = doc(db, role, role);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
+        
+        // Obtener rol de localStorage primero
+        let roleFound = localStorage.getItem('userRole');
+        
+        // Si no está en localStorage, obtener de Firestore
+        if (!roleFound) {
+          // Verificar si es administrador
+          const adminDocRef = doc(db, 'ADMINISTRADORES', 'ADMINISTRADORES');
+          const adminDocSnap = await getDoc(adminDocRef);
+          
+          if (adminDocSnap.exists()) {
+            const data = adminDocSnap.data();
             if (data && data[user.email]) {
-              roleFound = role;
-              break;
+              roleFound = 'ADMINISTRADORES';
             }
           }
+          
+          // Si no es admin, asumir asesor
+          if (!roleFound) {
+            roleFound = 'ASESOR';
+          }
+          
+          // Guardar en localStorage
+          localStorage.setItem('userRole', roleFound);
         }
+        
         setUserRole(roleFound);
         setIsAuthenticated(true);
       } else {
         setUserEmail('');
         setUserRole('');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userRole');
         setIsAuthenticated(false);
       }
       setLoading(false);

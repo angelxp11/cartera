@@ -24,3 +24,5 @@ yarn-error.log*
 src/funciones.js
 .gitignore
 firestore.rules
+firestore.rules
+firestore.rules

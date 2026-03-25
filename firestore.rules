@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/ADMINISTRADORES/ADMINISTRADORES) &&
+        request.auth.token.email in
+        get(/databases/$(database)/documents/ADMINISTRADORES/ADMINISTRADORES).data;
+    }
+
+    match /ESTUDIANTES_ACTIVOS/{userId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /ESTUDIANTES_DESACTIVADOS/{userId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /CURSOS/{cursoId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 🔓 ACCESO TOTAL PÚBLICO
+    match /INTERESADOS/{docId} {
+      allow read, write: if true;
+    }
+
+    match /ADMINISTRADORES/ADMINISTRADORES {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    match /ADMINISTRADORES/ASESOR {
+      allow read: if isAdmin();      // solo admin puede ver asesores
+      allow write: if isAdmin();     // solo admin puede escribir asesores
+    }
+  }
+}

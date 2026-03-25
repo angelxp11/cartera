@@ -70,6 +70,17 @@ function Sidebar({ userEmail, userRole, onLogout, isOpen, toggleSidebar, onNavig
           </>
         )}
 
+        {userRole === 'ASESOR' && (
+          <button
+            type="button"
+            className={`csb-nav-item ${activeView === 'interesados' ? 'csb-active' : ''}`}
+            onClick={() => onNavigate('interesados')}
+          >
+            <span className="csb-nav-icon">👥</span>
+            {isOpen && <span className="csb-nav-label">INTERESADOS</span>}
+          </button>
+        )}
+
       </nav>
 
       {/* FOOTER */}
